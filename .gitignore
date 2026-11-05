@@ -8,3 +8,10 @@ apps/api/data/
 dist/
 out/
 contracts/cache/
+
+# local-only (machine paths, personal docs)
+.claude/launch.json
+.node-version
+hhhhhh.pdf
+proofwork-scaffold.zip
+*.tsbuildinfo

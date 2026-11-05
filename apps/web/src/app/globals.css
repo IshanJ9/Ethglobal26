@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: 237 240 243;   /* #EDF0F3 cool ledger grey */
+  --surface: 255 255 255;
+  --ink: 23 32 51;        /* #172033 navy ink */
+  --muted: 84 95 115;     /* #545F73 */
+  --line: 205 211 220;    /* #CDD3DC */
+  --danger: 179 38 30;    /* #B3261E */
+  --ai: 109 75 216;       /* #6D4BD8  agents collect */
+  --code: 47 95 143;      /* #2F5F8F  code computes */
+  --human: 150 102 0;     /* #966600  humans decide (ochre, darkened for AA text) */
+  --chain: 14 122 107;    /* #0E7A6B  chain proves */
+  --mock: 233 185 73;     /* #E9B949  mock hatch */
+  color-scheme: light;
+}
+
+html {
+  background: rgb(var(--paper));
+  color: rgb(var(--ink));
+}
+
+body {
+  background: rgb(var(--paper));
+  font-feature-settings: "ss01", "tnum";
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--code));
+  outline-offset: 2px;
+}
+
+/* MOCK is hatched so it can never be mistaken for a verified (solid) state. */
+.hatch-mock {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(var(--mock)) 0 5px,
+    rgb(var(--mock) / 0.55) 5px 10px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
