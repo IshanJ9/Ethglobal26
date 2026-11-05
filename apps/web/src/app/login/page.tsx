@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { api, unwrap, type Persona } from "@/lib/api";
+import { api, ApiError, unwrap, type Persona } from "@/lib/api";
 import { usePublicConfig } from "@/lib/config";
 import { errorMessage } from "@/lib/errors";
 import { shortHex } from "@/lib/format";
@@ -47,7 +47,9 @@ export default function LoginPage() {
 
       {login.isError ? (
         <p role="alert" className="mt-6 rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-          Sign-in failed: {errorMessage(login.error)}
+          {login.error instanceof ApiError && login.error.code === "not_found"
+            ? "Demo sign-in is not available on this API yet. The server has no /v1/dev/login route."
+            : `Sign-in failed: ${errorMessage(login.error)}`}
         </p>
       ) : null}
 
