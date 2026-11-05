@@ -1,0 +1,149 @@
+{
+  "plan_id": "pln_eng_v1",
+  "name": "Software Engineer (IC) - H2 bonus",
+  "department": "software",
+  "kind": "target_attainment",
+  "target_bonus": "5000000000",
+  "holdback_bps": 2000,
+  "maturity_days": 90,
+  "payout_curve": [
+    [
+      0,
+      0
+    ],
+    [
+      7000,
+      5000
+    ],
+    [
+      9000,
+      10000
+    ],
+    [
+      11000,
+      10000
+    ],
+    [
+      13000,
+      15000
+    ]
+  ],
+  "kras": [
+    {
+      "kra_id": "deliverables",
+      "label": "Planned deliverables shipped",
+      "weight_bps": 3000,
+      "direction": "higher_better",
+      "target": 20,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "deliverables",
+      "agg": "sum",
+      "source": "git",
+      "basis": "space_activity"
+    },
+    {
+      "kra_id": "code_reviews",
+      "label": "Code reviews completed",
+      "weight_bps": 1500,
+      "direction": "higher_better",
+      "target": 40,
+      "floor_ppm": 0,
+      "cap_ppm": 1100000,
+      "metric_key": "code_reviews",
+      "agg": "sum",
+      "source": "git",
+      "basis": "space_collaboration"
+    },
+    {
+      "kra_id": "service_cfr",
+      "label": "Change failure rate (bps, team context)",
+      "weight_bps": 2000,
+      "direction": "lower_better",
+      "target": 1500,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "service_cfr_bps",
+      "agg": "latest",
+      "source": "tickets",
+      "basis": "dora_cfr_team_context"
+    },
+    {
+      "kra_id": "incident_sla",
+      "label": "Incident SLA met (bps, team context)",
+      "weight_bps": 1500,
+      "direction": "higher_better",
+      "target": 9500,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "incident_sla_bps",
+      "agg": "latest",
+      "source": "tickets",
+      "basis": "dora_mttr_team_context"
+    },
+    {
+      "kra_id": "bug_impact",
+      "label": "Severity-weighted bug-fix credit (milli-points)",
+      "weight_bps": 1000,
+      "direction": "higher_better",
+      "target": 40000,
+      "floor_ppm": 0,
+      "cap_ppm": 1500000,
+      "metric_key": "bug_credit_milli",
+      "agg": "sum",
+      "source": "bug_credit",
+      "basis": "cvss_severity_weighted_szz_filtered"
+    },
+    {
+      "kra_id": "client_engagement",
+      "label": "Co-signed client engagements",
+      "weight_bps": 1000,
+      "direction": "higher_better",
+      "target": 2,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "client_engagements",
+      "agg": "sum",
+      "source": "cosign",
+      "basis": "client_cosign"
+    }
+  ],
+  "bug_credit": {
+    "severity": {
+      "P0": {
+        "full_credit_count": 3,
+        "tier_cap_milli": 120000,
+        "weight_milli": 40000
+      },
+      "P1": {
+        "full_credit_count": 4,
+        "tier_cap_milli": 60000,
+        "weight_milli": 15000
+      },
+      "P2": {
+        "full_credit_count": 5,
+        "tier_cap_milli": 25000,
+        "weight_milli": 5000
+      },
+      "P3": {
+        "full_credit_count": 5,
+        "tier_cap_milli": 10000,
+        "weight_milli": 1000
+      }
+    },
+    "share_defaults": {
+      "finder_bps": 2000,
+      "fixer_bps": 6000,
+      "reviewer_bps": 2000
+    },
+    "taper_bps": 5000
+  },
+  "gates": {
+    "min_verified_ratio_bps": 8000
+  },
+  "carry_forward": {
+    "history_weight_bps": 2000,
+    "open_item_decay_bps": 5000
+  },
+  "formula_hash": "0x0bc988716488032182947a427a84369cfca52438bfcdd6707bf285679ebf8d74"
+}

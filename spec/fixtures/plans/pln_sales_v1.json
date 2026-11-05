@@ -1,0 +1,35 @@
+{
+  "plan_id": "pln_sales_v1",
+  "name": "Account Executive - H2 commission",
+  "department": "sales",
+  "kind": "tiered_commission",
+  "target_bonus": "0",
+  "holdback_bps": 0,
+  "maturity_days": 0,
+  "payout_curve": [
+    [
+      0,
+      10000
+    ],
+    [
+      1000000,
+      10000
+    ]
+  ],
+  "kras": [],
+  "commission": {
+    "quota": 800000,
+    "rate_bps": 500,
+    "accelerator_bps": 15000,
+    "metric_key": "closed_won_usd",
+    "retention_metric_key": "retention_bps"
+  },
+  "gates": {
+    "min_verified_ratio_bps": 8000
+  },
+  "carry_forward": {
+    "history_weight_bps": 0,
+    "open_item_decay_bps": 0
+  },
+  "formula_hash": "0xf1e73ac20b8c445747d014e78c910b8d17942c34d5beb95bf5e72ca0dbd842b1"
+}

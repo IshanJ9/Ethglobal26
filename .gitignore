@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.local
+apps/api/data/
+*.log
+.DS_Store
+.next/
+dist/
+out/
+contracts/cache/

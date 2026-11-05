@@ -1,0 +1,228 @@
+{
+  "_note": "Demo org. Wallet addresses derive from public demo keys (see spec/vectors/vectors.json persona_key_rule). NEVER fund them with real value.",
+  "org": {
+    "org_id": "org_acme_software",
+    "name": "Acme Software Ltd",
+    "client_org": "Acme Bank"
+  },
+  "personas": [
+    {
+      "persona_id": "p_dev_a",
+      "employee_id": "emp_dev_a",
+      "display_name": "Asha Rao",
+      "role": "employee",
+      "department": "software",
+      "wallet_address": "0xe0A6B36D1381B1844A569acecde5501cA3Aca9c1",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr",
+      "world_id_verified": false
+    },
+    {
+      "persona_id": "p_dev_b",
+      "employee_id": "emp_dev_b",
+      "display_name": "Ben Carter",
+      "role": "employee",
+      "department": "software",
+      "wallet_address": "0xDD9BF67e531Cc092D3695381B060B93cae557035",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr",
+      "world_id_verified": false
+    },
+    {
+      "persona_id": "p_dev_c",
+      "employee_id": "emp_dev_c",
+      "display_name": "Chen Wei",
+      "role": "employee",
+      "department": "software",
+      "wallet_address": "0xC14372935dD977Eace9b673c4d21Fb466f9Cc025",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr",
+      "world_id_verified": false
+    },
+    {
+      "persona_id": "p_eng_mgr",
+      "employee_id": "emp_eng_mgr",
+      "display_name": "Elena Park",
+      "role": "manager",
+      "department": "software",
+      "wallet_address": "0x533cD3D69794436c3BF8ef0F1Eca50f3782dBbFa",
+      "ens_name": null,
+      "manager_employee_id": null,
+      "world_id_verified": true
+    },
+    {
+      "persona_id": "p_ae",
+      "employee_id": "emp_ae",
+      "display_name": "Farid Khan",
+      "role": "employee",
+      "department": "sales",
+      "wallet_address": "0x0080219E7Db838dd56C24c5E96F547D08DfAD352",
+      "ens_name": null,
+      "manager_employee_id": "emp_sales_mgr",
+      "world_id_verified": false
+    },
+    {
+      "persona_id": "p_sales_mgr",
+      "employee_id": "emp_sales_mgr",
+      "display_name": "Grace Lee",
+      "role": "manager",
+      "department": "sales",
+      "wallet_address": "0x44D6852BD76d643575563ef1078d87db58C3d0D6",
+      "ens_name": null,
+      "manager_employee_id": null,
+      "world_id_verified": true
+    },
+    {
+      "persona_id": "p_mkt_exec",
+      "employee_id": "emp_mkt_exec",
+      "display_name": "Hiro Tanaka",
+      "role": "employee",
+      "department": "marketing",
+      "wallet_address": "0x2dF3fABb156F51615aB02AC214482a1dBDAFa35e",
+      "ens_name": null,
+      "manager_employee_id": "emp_mkt_mgr",
+      "world_id_verified": false
+    },
+    {
+      "persona_id": "p_mkt_mgr",
+      "employee_id": "emp_mkt_mgr",
+      "display_name": "Isha Mehta",
+      "role": "manager",
+      "department": "marketing",
+      "wallet_address": "0x75C989274262d545B872F298B1173951A97af8fD",
+      "ens_name": null,
+      "manager_employee_id": null,
+      "world_id_verified": true
+    },
+    {
+      "persona_id": "p_hr",
+      "employee_id": "emp_hr",
+      "display_name": "Jon Ruiz",
+      "role": "hr",
+      "department": "hr",
+      "wallet_address": "0x148e33e153c6c93bC91CAC71D16487B93c52abD7",
+      "ens_name": null,
+      "manager_employee_id": null,
+      "world_id_verified": true
+    },
+    {
+      "persona_id": "p_client_cfo",
+      "employee_id": "ext_client_cfo",
+      "display_name": "Karan Shah (CFO, Acme Bank)",
+      "role": "external_cosigner",
+      "department": "external",
+      "wallet_address": "0xDD0F57c26b23999240Fd524Ee43a4f918BbA7415",
+      "ens_name": null,
+      "manager_employee_id": null,
+      "world_id_verified": false
+    }
+  ],
+  "employees": [
+    {
+      "employee_id": "emp_dev_a",
+      "display_name": "Asha Rao",
+      "department": "software",
+      "level": "senior_ic",
+      "plan_id": "pln_eng_v1",
+      "wallet_address": "0xe0A6B36D1381B1844A569acecde5501cA3Aca9c1",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_dev_b",
+      "display_name": "Ben Carter",
+      "department": "software",
+      "level": "ic",
+      "plan_id": "pln_eng_v1",
+      "wallet_address": "0xDD9BF67e531Cc092D3695381B060B93cae557035",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_dev_c",
+      "display_name": "Chen Wei",
+      "department": "software",
+      "level": "ic",
+      "plan_id": "pln_eng_v1",
+      "wallet_address": "0xC14372935dD977Eace9b673c4d21Fb466f9Cc025",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_eng_mgr",
+      "display_name": "Elena Park",
+      "department": "software",
+      "level": "manager",
+      "plan_id": "pln_eng_v1",
+      "wallet_address": "0x533cD3D69794436c3BF8ef0F1Eca50f3782dBbFa",
+      "ens_name": null,
+      "manager_employee_id": null
+    },
+    {
+      "employee_id": "emp_ae",
+      "display_name": "Farid Khan",
+      "department": "sales",
+      "level": "ic",
+      "plan_id": "pln_sales_v1",
+      "wallet_address": "0x0080219E7Db838dd56C24c5E96F547D08DfAD352",
+      "ens_name": null,
+      "manager_employee_id": "emp_sales_mgr"
+    },
+    {
+      "employee_id": "emp_sales_mgr",
+      "display_name": "Grace Lee",
+      "department": "sales",
+      "level": "manager",
+      "plan_id": "pln_sales_v1",
+      "wallet_address": "0x44D6852BD76d643575563ef1078d87db58C3d0D6",
+      "ens_name": null,
+      "manager_employee_id": null
+    },
+    {
+      "employee_id": "emp_mkt_exec",
+      "display_name": "Hiro Tanaka",
+      "department": "marketing",
+      "level": "ic",
+      "plan_id": "pln_mkt_v1",
+      "wallet_address": "0x2dF3fABb156F51615aB02AC214482a1dBDAFa35e",
+      "ens_name": null,
+      "manager_employee_id": "emp_mkt_mgr"
+    },
+    {
+      "employee_id": "emp_mkt_mgr",
+      "display_name": "Isha Mehta",
+      "department": "marketing",
+      "level": "manager",
+      "plan_id": "pln_mkt_v1",
+      "wallet_address": "0x75C989274262d545B872F298B1173951A97af8fD",
+      "ens_name": null,
+      "manager_employee_id": null
+    }
+  ],
+  "cycles": [
+    {
+      "cycle_id": "cyc_2026h2",
+      "numeric_id": 1,
+      "label": "FY26 H2",
+      "starts_on": "2026-07-01",
+      "ends_on": "2026-12-31",
+      "status": "open"
+    },
+    {
+      "cycle_id": "cyc_2027h1",
+      "numeric_id": 2,
+      "label": "FY27 H1",
+      "starts_on": "2027-01-01",
+      "ends_on": "2027-06-30",
+      "status": "open"
+    }
+  ],
+  "plan_ids": [
+    "pln_eng_v1",
+    "pln_mkt_v1",
+    "pln_sales_v1"
+  ],
+  "connector_keys": {
+    "demo": "demo-connector-key-change-me"
+  }
+}

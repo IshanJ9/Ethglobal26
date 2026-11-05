@@ -1,0 +1,1279 @@
+openapi: 3.1.0
+info:
+  title: Proofwork API
+  version: 1.0.0
+  description: |
+    FROZEN CONTRACT between Agent A (implements) and Agent B (consumes). Changes only via CHANGE_REQUESTS.md.
+    Conventions (apply everywhere):
+    - Money = decimal STRING of base units (USDC has 6 decimals; 1 USDC = "1000000"). Never JSON numbers, never floats.
+    - Scores: score_ppm (parts per million), *_bps (basis points), milli-points. All JSON INTEGERS.
+    - Hashes/commitments = lowercase 0x + 64 hex. Addresses = EIP-55 checksummed. Signatures = 0x + 130 hex.
+    - Timestamps = RFC 3339 UTC. Dates = YYYY-MM-DD.
+    - All IDs are opaque strings with a type prefix (emp_, cyc_, pln_, clm_, evd_, run_, scd_, apr_, bat_, att_).
+    - Errors always use the Error schema. Unknown request fields are rejected (400 unknown_field).
+    - Idempotency: POST endpoints that create things accept optional header Idempotency-Key.
+servers:
+  - url: http://localhost:8787
+    description: local dev (API port fixed at 8787)
+tags:
+  - { name: meta }
+  - { name: auth }
+  - { name: org }
+  - { name: claims }
+  - { name: cosign }
+  - { name: evidence }
+  - { name: scores }
+  - { name: approvals }
+  - { name: chain }
+  - { name: payouts }
+  - { name: verify }
+  - { name: dev }
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      tags: [meta]
+      operationId: healthz
+      security: []
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [ok, spec_version]
+                properties:
+                  ok: { type: boolean }
+                  spec_version: { type: string }
+  /v1/config/public:
+    get:
+      tags: [meta]
+      operationId: getPublicConfig
+      security: []
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/PublicConfig" } } } }
+  /v1/dev/login:
+    post:
+      tags: [auth]
+      operationId: devLogin
+      security: []
+      description: Demo login as a seeded persona. Disabled when AUTH_MODE != dev. Returns an HS256 JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [persona_id]
+              properties:
+                persona_id: { $ref: "#/components/schemas/PersonaId" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [token, persona]
+                properties:
+                  token: { type: string }
+                  persona: { $ref: "#/components/schemas/Persona" }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Persona" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/org/employees:
+    get:
+      tags: [org]
+      operationId: listEmployees
+      description: ABAC-filtered. Employees see only themselves; managers see their reports; HR sees all.
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: object, additionalProperties: false, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Employee" } } } } } } }
+  /v1/org/plans:
+    get:
+      tags: [org]
+      operationId: listPlans
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: object, additionalProperties: false, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Plan" } } } } } } }
+  /v1/org/plans/{plan_id}:
+    get:
+      tags: [org]
+      operationId: getPlan
+      parameters: [{ $ref: "#/components/parameters/PlanId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Plan" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/cycles:
+    get:
+      tags: [org]
+      operationId: listCycles
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: object, additionalProperties: false, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Cycle" } } } } } } }
+  /v1/claims:
+    post:
+      tags: [claims]
+      operationId: createClaim
+      description: |
+        Employee submits free text ("I did X"). The AI draft step (0G Private Computer, or mock) turns it into a structured
+        ClaimBody + evidence excerpt. State = drafted. Nothing is signed or anchored yet.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ClaimCreate" } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Claim" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+    get:
+      tags: [claims]
+      operationId: listClaims
+      parameters:
+        - { name: cycle_id, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { $ref: "#/components/schemas/ClaimState" } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: object, additionalProperties: false, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Claim" } } } } } } }
+  /v1/claims/{claim_id}:
+    get:
+      tags: [claims]
+      operationId: getClaim
+      parameters: [{ $ref: "#/components/parameters/ClaimId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Claim" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/claims/{claim_id}/draft:
+    patch:
+      tags: [claims]
+      operationId: editClaimDraft
+      description: Employee edits the AI draft. Only valid in state drafted. Recomputes nothing on-chain.
+      parameters: [{ $ref: "#/components/parameters/ClaimId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                body: { $ref: "#/components/schemas/ClaimBody" }
+                evidence_excerpt: { type: string, maxLength: 2000 }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Claim" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/claims/{claim_id}/signing-package:
+    get:
+      tags: [claims]
+      operationId: getClaimSigningPackage
+      description: |
+        Returns the exact EIP-712 typed data the employee must sign, plus the values/salts so the UI can recompute the
+        commitments locally with @proofwork/crypto (the "verify it yourself" panel). Freezes the draft.
+      parameters: [{ $ref: "#/components/parameters/ClaimId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/SigningPackage" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/claims/{claim_id}/submit:
+    post:
+      tags: [claims]
+      operationId: submitClaim
+      description: Employee submits their EIP-712 signature. Backend recovers the signer and requires it equals the employee address. State -> pending_cosign.
+      parameters: [{ $ref: "#/components/parameters/ClaimId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [employee_signature]
+              properties:
+                employee_signature: { $ref: "#/components/schemas/Signature" }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Claim" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/claims/{claim_id}/cosign-grants:
+    post:
+      tags: [claims]
+      operationId: createCosignGrant
+      description: Creates a time-boxed, single-claim view grant for the co-signer. The token is returned ONCE (magic link). In dev mode the link is returned in the response and not emailed.
+      parameters: [{ $ref: "#/components/parameters/ClaimId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [auth_method]
+              properties:
+                auth_method: { $ref: "#/components/schemas/CosignAuthMethod" }
+                ttl_hours: { type: integer, minimum: 1, maximum: 168, default: 72 }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/CosignGrant" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/cosign/view:
+    get:
+      tags: [cosign]
+      operationId: cosignView
+      security: [{ cosignToken: [] }]
+      description: Co-signer reads the claim they are asked to attest. After sign/decline/expiry/revocation this returns 410 grant_closed - the co-signer loses access.
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/CosignView" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "410": { $ref: "#/components/responses/Error" }
+  /v1/cosign/sign:
+    post:
+      tags: [cosign]
+      operationId: cosignSign
+      security: [{ cosignToken: [] }]
+      description: |
+        Co-signer submits the EIP-712 signature over the SAME typed data. If grant.auth_method is world_id then world_result is
+        REQUIRED and validated server-side by the WorldVerifier adapter. Signature recovery must equal claim.cosigner address.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [signature]
+              properties:
+                signature: { $ref: "#/components/schemas/Signature" }
+                world_result: { $ref: "#/components/schemas/WorldResult" }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Claim" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "410": { $ref: "#/components/responses/Error" }
+  /v1/cosign/decline:
+    post:
+      tags: [cosign]
+      operationId: cosignDecline
+      security: [{ cosignToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Claim" } } } }
+        "410": { $ref: "#/components/responses/Error" }
+  /v1/runs:
+    post:
+      tags: [evidence]
+      operationId: createRun
+      description: "Starts the evidence-collection AGENT for an employee+cycle (tools: git, tickets, CRM, HRIS connectors; daily work-log). Returns immediately; poll GET /v1/runs/{id}."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [employee_id, cycle_id]
+              properties:
+                employee_id: { type: string }
+                cycle_id: { type: string }
+      responses:
+        "202": { description: accepted, content: { application/json: { schema: { $ref: "#/components/schemas/Run" } } } }
+  /v1/runs/{run_id}:
+    get:
+      tags: [evidence]
+      operationId: getRun
+      parameters: [{ name: run_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Run" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/evidence:
+    get:
+      tags: [evidence]
+      operationId: listEvidence
+      parameters:
+        - { name: employee_id, in: query, schema: { type: string } }
+        - { name: cycle_id, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/EvidenceStatus" } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: object, additionalProperties: false, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/EvidenceItem" } } } } } } }
+  /v1/evidence/{evidence_id}:
+    get:
+      tags: [evidence]
+      operationId: getEvidence
+      parameters: [{ $ref: "#/components/parameters/EvidenceId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceItem" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/evidence/ingest:
+    post:
+      tags: [evidence]
+      operationId: ingestEvidence
+      security: [{ connectorKey: [] }]
+      description: Connector webhook (e.g. GitHub/Jira/CRM adapters or the Zoho plugin). Evidence enters as unverified until a verification rule or co-sign promotes it.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceIngest" } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceItem" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/evidence/{evidence_id}/shred:
+    post:
+      tags: [evidence]
+      operationId: shredEvidence
+      description: HR/DPO erasure request. Destroys the per-record data key and deletes plaintext + 0G replica pointer. Commitment/Merkle leaf remain (non-reversible). Requires role hr.
+      parameters: [{ $ref: "#/components/parameters/EvidenceId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/EvidenceItem" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /v1/dev/inject:
+    post:
+      tags: [dev]
+      operationId: devInject
+      description: Demo only (disabled when AUTH_MODE != dev). Plays a named step from spec/fixtures/seed-scenario.json into the system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [step_id]
+              properties:
+                step_id: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [step_id, evidence_ids]
+                properties:
+                  step_id: { type: string }
+                  evidence_ids: { type: array, items: { type: string } }
+  /v1/scores/compute:
+    post:
+      tags: [scores]
+      operationId: computeScore
+      description: PURE and DETERMINISTIC. Same inputs -> byte-identical output. Never calls an LLM. Does not persist anything.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ComputeRequest" } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ComputeResult" } } } }
+        "422": { $ref: "#/components/responses/Error" }
+  /v1/scorecards:
+    post:
+      tags: [scores]
+      operationId: createScorecard
+      description: Computes and persists the next version (v1, v2, ...) for an employee+cycle. If an attested version exists, the new version supersedes it (status draft until approved).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [employee_id, cycle_id]
+              properties:
+                employee_id: { type: string }
+                cycle_id: { type: string }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Scorecard" } } } }
+    get:
+      tags: [scores]
+      operationId: listScorecards
+      parameters:
+        - { name: employee_id, in: query, schema: { type: string } }
+        - { name: cycle_id, in: query, schema: { type: string } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: object, additionalProperties: false, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Scorecard" } } } } } } }
+  /v1/scorecards/{scorecard_id}:
+    get:
+      tags: [scores]
+      operationId: getScorecard
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Scorecard" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/scorecards/{scorecard_id}/diff/{other_id}:
+    get:
+      tags: [scores]
+      operationId: diffScorecards
+      parameters:
+        - { $ref: "#/components/parameters/ScorecardId" }
+        - { name: other_id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ScorecardDiff" } } } }
+  /v1/scorecards/{scorecard_id}/revise:
+    post:
+      tags: [scores]
+      operationId: reviseScorecard
+      description: Starts a revision because evidence changed (e.g. PR reverted). Creates the next version in status draft with reason. Equivalent to POST /v1/scorecards plus a recorded reason.
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Scorecard" } } } }
+  /v1/approvals:
+    post:
+      tags: [approvals]
+      operationId: createApproval
+      description: Creates a human-approval request for a scorecard (manager). Returns the challenge the World step-up must bind to.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [scorecard_id]
+              properties:
+                scorecard_id: { type: string }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Approval" } } } }
+  /v1/approvals/{approval_id}:
+    get:
+      tags: [approvals]
+      operationId: getApproval
+      parameters: [{ $ref: "#/components/parameters/ApprovalId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Approval" } } } }
+  /v1/approvals/{approval_id}/complete:
+    post:
+      tags: [approvals]
+      operationId: completeApproval
+      description: |
+        Manager decision. approve requires a valid world_result (validated server-side). deny is final for this scorecard version:
+        attestation and payout stay BLOCKED (409 approval_required). The approving user must hold role manager|hr for the employee and must not be the employee.
+      parameters: [{ $ref: "#/components/parameters/ApprovalId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, deny] }
+                comment: { type: string, maxLength: 500 }
+                world_result: { $ref: "#/components/schemas/WorldResult" }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Approval" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /v1/approvals/{approval_id}/cancel:
+    post:
+      tags: [approvals]
+      operationId: cancelApproval
+      parameters: [{ $ref: "#/components/parameters/ApprovalId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Approval" } } } }
+  /v1/chain/anchor:
+    post:
+      tags: [chain]
+      operationId: anchorBatch
+      description: Builds a Merkle tree over all not-yet-anchored evidence commitments and calls registry.anchorBatch. Backend is the only tx sender.
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/AnchorBatch" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/chain/batches/{batch_id}:
+    get:
+      tags: [chain]
+      operationId: getBatch
+      parameters: [{ name: batch_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/AnchorBatch" } } } }
+  /v1/chain/attest:
+    post:
+      tags: [chain]
+      operationId: attestScorecard
+      description: Calls registry.attestScore for an APPROVED scorecard. 409 approval_required if the approval is missing/denied. Supersedes the previous attestation automatically.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [scorecard_id]
+              properties:
+                scorecard_id: { type: string }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/AttestationRef" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/payouts/{scorecard_id}:
+    get:
+      tags: [payouts]
+      operationId: getPayout
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Payout" } } } }
+  /v1/payouts/{scorecard_id}/release:
+    post:
+      tags: [payouts]
+      operationId: releasePayout
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Payout" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/payouts/{scorecard_id}/release-holdback:
+    post:
+      tags: [payouts]
+      operationId: releaseHoldback
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Payout" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/payouts/{scorecard_id}/dispute:
+    post:
+      tags: [payouts]
+      operationId: disputePayout
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [reason], properties: { reason: { type: string, maxLength: 500 } } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Payout" } } } }
+  /v1/payouts/{scorecard_id}/resolve:
+    post:
+      tags: [payouts]
+      operationId: resolveDispute
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [release_funds], properties: { release_funds: { type: boolean } } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Payout" } } } }
+  /v1/verify:
+    post:
+      tags: [verify]
+      operationId: verify
+      security: []
+      description: |
+        Public selective-disclosure verification. Caller supplies what they were shown (value + salt). Server recomputes the
+        commitment, checks the Merkle proof against the anchored root read from chain, and (for claims) recovers both EIP-712 signers.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VerifyRequest" } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/VerifyResult" } } } }
+  /v1/audit:
+    get:
+      tags: [verify]
+      operationId: listAudit
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } }
+                  next_cursor: { type: [string, "null"] }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    cosignToken: { type: apiKey, in: header, name: X-Cosign-Token }
+    connectorKey: { type: apiKey, in: header, name: X-Connector-Key }
+  parameters:
+    PlanId: { name: plan_id, in: path, required: true, schema: { type: string } }
+    ClaimId: { name: claim_id, in: path, required: true, schema: { type: string } }
+    EvidenceId: { name: evidence_id, in: path, required: true, schema: { type: string } }
+    ScorecardId: { name: scorecard_id, in: path, required: true, schema: { type: string } }
+    ApprovalId: { name: approval_id, in: path, required: true, schema: { type: string } }
+  responses:
+    Error:
+      description: error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Bytes32: { type: string, pattern: "^0x[0-9a-f]{64}$" }
+    Address: { type: string, pattern: "^0x[0-9a-fA-F]{40}$" }
+    Signature: { type: string, pattern: "^0x[0-9a-f]{130}$" }
+    Amount: { type: string, pattern: "^[0-9]+$", description: "Decimal string of base units (USDC: 6 decimals)." }
+    Timestamp: { type: string, format: date-time }
+    PersonaId:
+      type: string
+      enum: [p_dev_a, p_dev_b, p_dev_c, p_eng_mgr, p_ae, p_sales_mgr, p_mkt_exec, p_mkt_mgr, p_hr, p_client_cfo]
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - bad_request
+                - unknown_field
+                - unauthorized
+                - forbidden
+                - not_found
+                - conflict
+                - invalid_state
+                - approval_required
+                - approval_denied
+                - grant_closed
+                - signature_mismatch
+                - world_verification_failed
+                - validation_failed
+                - gate_failed
+                - chain_error
+                - upstream_unavailable
+                - rate_limited
+                - internal
+            message: { type: string }
+            details: { type: object, additionalProperties: true }
+    Role: { type: string, enum: [employee, manager, hr, external_cosigner, admin] }
+    Persona:
+      type: object
+      additionalProperties: false
+      required: [persona_id, employee_id, display_name, role, department, wallet_address]
+      properties:
+        persona_id: { $ref: "#/components/schemas/PersonaId" }
+        employee_id: { type: string }
+        display_name: { type: string }
+        role: { $ref: "#/components/schemas/Role" }
+        department: { type: string, enum: [software, marketing, sales, hr, external] }
+        wallet_address: { $ref: "#/components/schemas/Address" }
+        ens_name: { type: [string, "null"] }
+        manager_employee_id: { type: [string, "null"] }
+        world_id_verified: { type: boolean }
+    Employee:
+      type: object
+      additionalProperties: false
+      required: [employee_id, display_name, department, level, plan_id, wallet_address]
+      properties:
+        employee_id: { type: string }
+        display_name: { type: string }
+        department: { type: string, enum: [software, marketing, sales] }
+        level: { type: string, enum: [ic, senior_ic, lead, manager] }
+        plan_id: { type: string }
+        wallet_address: { $ref: "#/components/schemas/Address" }
+        ens_name: { type: [string, "null"] }
+        manager_employee_id: { type: [string, "null"] }
+    Cycle:
+      type: object
+      additionalProperties: false
+      required: [cycle_id, numeric_id, label, starts_on, ends_on, status]
+      properties:
+        cycle_id: { type: string }
+        numeric_id: { type: integer, minimum: 1, description: "The uint64 used in EIP-712 and contracts." }
+        label: { type: string }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date }
+        status: { type: string, enum: [open, closed] }
+    ProgressionKind: { type: string, enum: [target_attainment, tiered_commission, bug_credit] }
+    PlanKra:
+      type: object
+      additionalProperties: false
+      required: [kra_id, label, weight_bps, direction, target, floor_ppm, cap_ppm, metric_key, agg, basis]
+      properties:
+        kra_id: { type: string }
+        label: { type: string }
+        weight_bps: { type: integer, minimum: 0, maximum: 10000 }
+        direction: { type: string, enum: [higher_better, lower_better] }
+        target: { type: integer, minimum: 1 }
+        floor_ppm: { type: integer, minimum: 0 }
+        cap_ppm: { type: integer, minimum: 1 }
+        metric_key: { type: string, description: "Key that EvidenceItem.observations[].metric_key must match to feed this KRA." }
+        agg: { type: string, enum: [sum, latest], description: "How observations of metric_key are combined into the KRA actual. See spec/ENGINE.md." }
+        source: { type: string, enum: [git, tickets, crm, hris, worklog, cosign, bug_credit, manual] }
+        basis: { type: string, description: "Documented source of the KRA definition, e.g. dora, space, sales_ote, mkt_pipeline." }
+    BugCreditPolicy:
+      type: object
+      additionalProperties: false
+      required: [severity, taper_bps, share_defaults]
+      properties:
+        severity:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: false
+            required: [weight_milli, full_credit_count, tier_cap_milli]
+            properties:
+              weight_milli: { type: integer }
+              full_credit_count: { type: integer }
+              tier_cap_milli: { type: integer }
+        taper_bps: { type: integer }
+        share_defaults:
+          type: object
+          additionalProperties: false
+          required: [finder_bps, fixer_bps, reviewer_bps]
+          properties:
+            finder_bps: { type: integer }
+            fixer_bps: { type: integer }
+            reviewer_bps: { type: integer }
+    CommissionPolicy:
+      type: object
+      additionalProperties: false
+      required: [quota, rate_bps, accelerator_bps, metric_key]
+      properties:
+        quota: { type: integer, minimum: 1 }
+        rate_bps: { type: integer }
+        accelerator_bps: { type: integer }
+        metric_key: { type: string }
+        retention_metric_key: { type: [string, "null"] }
+    GatePolicy:
+      type: object
+      additionalProperties: false
+      required: [min_verified_ratio_bps]
+      properties:
+        min_verified_ratio_bps: { type: integer, minimum: 0, maximum: 10000 }
+    Plan:
+      type: object
+      additionalProperties: false
+      required: [plan_id, name, department, kind, target_bonus, holdback_bps, maturity_days, payout_curve, kras, gates, formula_hash]
+      properties:
+        plan_id: { type: string }
+        name: { type: string }
+        department: { type: string, enum: [software, marketing, sales] }
+        kind: { $ref: "#/components/schemas/ProgressionKind" }
+        target_bonus: { $ref: "#/components/schemas/Amount" }
+        holdback_bps: { type: integer, minimum: 0, maximum: 10000 }
+        maturity_days: { type: integer, minimum: 0 }
+        payout_curve:
+          type: array
+          description: "[[score_bps, multiplier_bps], ...] x strictly increasing, y non-decreasing, linear interpolation, clamped at ends."
+          items: { type: array, minItems: 2, maxItems: 2, items: { type: integer, minimum: 0 } }
+        kras: { type: array, items: { $ref: "#/components/schemas/PlanKra" } }
+        bug_credit: { $ref: "#/components/schemas/BugCreditPolicy" }
+        commission: { $ref: "#/components/schemas/CommissionPolicy" }
+        gates: { $ref: "#/components/schemas/GatePolicy" }
+        carry_forward: { $ref: "#/components/schemas/CarryForwardPolicy" }
+        formula_hash: { $ref: "#/components/schemas/Bytes32" }
+    CarryForwardPolicy:
+      type: object
+      additionalProperties: false
+      required: [history_weight_bps]
+      properties:
+        history_weight_bps: { type: integer, minimum: 0, maximum: 5000, description: "Weight of the trailing prior-cycle score blended into this cycle (0-50%)." }
+        open_item_decay_bps: { type: integer, minimum: 0, maximum: 10000 }
+    ClaimKind: { type: string, enum: [client_call, delivery_signoff, demo, incident_support, deal_support, campaign_signoff, other] }
+    ClaimBody:
+      type: object
+      additionalProperties: false
+      required: [schema, kind, summary, occurred_on, duration_minutes, counterparty_label]
+      properties:
+        schema: { type: string, const: pw.claim.v1 }
+        kind: { $ref: "#/components/schemas/ClaimKind" }
+        summary: { type: string, minLength: 1, maxLength: 500 }
+        occurred_on: { type: string, format: date }
+        duration_minutes: { type: integer, minimum: 0, maximum: 1440 }
+        counterparty_label: { type: string, maxLength: 120 }
+    ClaimState: { type: string, enum: [drafted, submitted, pending_cosign, verified, declined, expired, disputed, rejected] }
+    CosignAuthMethod: { type: string, enum: [world_id, magic_link_wallet] }
+    InferenceRecord:
+      type: object
+      additionalProperties: false
+      required: [provider, model, mode, request_id, tee_verified, created_at]
+      properties:
+        provider: { type: string, enum: [0g_private_computer, mock] }
+        model: { type: string }
+        mode: { type: string, enum: [live, mock] }
+        request_id: { type: string }
+        zg_res_key: { type: [string, "null"] }
+        tee_verified: { type: [boolean, "null"], description: "null in mock mode." }
+        prompt_hash: { $ref: "#/components/schemas/Bytes32" }
+        output_hash: { $ref: "#/components/schemas/Bytes32" }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+    ClaimCreate:
+      type: object
+      additionalProperties: false
+      required: [cycle_id, kra_id, raw_text, cosigner_address, cosigner_label]
+      properties:
+        cycle_id: { type: string }
+        kra_id: { type: string }
+        raw_text: { type: string, minLength: 1, maxLength: 4000, description: "UNTRUSTED text. Treated as data by the AI step (prompt-injection defence)." }
+        cosigner_address: { $ref: "#/components/schemas/Address" }
+        cosigner_label: { type: string, maxLength: 120 }
+    Claim:
+      type: object
+      additionalProperties: false
+      required: [claim_id, employee_id, cycle_id, kra_id, state, body, evidence_excerpt, cosigner_address, cosigner_label, created_at]
+      properties:
+        claim_id: { type: string }
+        employee_id: { type: string }
+        cycle_id: { type: string }
+        kra_id: { type: string }
+        state: { $ref: "#/components/schemas/ClaimState" }
+        body: { $ref: "#/components/schemas/ClaimBody" }
+        evidence_excerpt: { type: string }
+        cosigner_address: { $ref: "#/components/schemas/Address" }
+        cosigner_label: { type: string }
+        ai_flags: { type: array, items: { type: string, enum: [prompt_injection_suspected, low_confidence, fields_inferred] } }
+        inference: { $ref: "#/components/schemas/InferenceRecord" }
+        claim_commitment: { $ref: "#/components/schemas/Bytes32" }
+        evidence_commitment: { $ref: "#/components/schemas/Bytes32" }
+        employee_signature: { $ref: "#/components/schemas/Signature" }
+        cosigner_signature: { $ref: "#/components/schemas/Signature" }
+        evidence_id: { type: [string, "null"] }
+        decline_reason: { type: [string, "null"] }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+        updated_at: { $ref: "#/components/schemas/Timestamp" }
+    TypedDataClaim:
+      type: object
+      additionalProperties: false
+      required: [domain, types, primaryType, message]
+      properties:
+        domain:
+          type: object
+          additionalProperties: false
+          required: [name, version, chainId, verifyingContract]
+          properties:
+            name: { type: string, const: Proofwork }
+            version: { type: string, const: "1" }
+            chainId: { type: integer }
+            verifyingContract: { $ref: "#/components/schemas/Address" }
+        types: { type: object, additionalProperties: true }
+        primaryType: { type: string, const: Claim }
+        message:
+          type: object
+          additionalProperties: false
+          required: [employee, claimCommitment, evidenceCommitment, cycleId, kraId, cosigner, nonce, deadline]
+          properties:
+            employee: { $ref: "#/components/schemas/Address" }
+            claimCommitment: { $ref: "#/components/schemas/Bytes32" }
+            evidenceCommitment: { $ref: "#/components/schemas/Bytes32" }
+            cycleId: { type: integer, description: "uint64 as JSON integer; use BigInt() in the client." }
+            kraId: { $ref: "#/components/schemas/Bytes32" }
+            cosigner: { $ref: "#/components/schemas/Address" }
+            nonce: { type: integer }
+            deadline: { type: integer, description: "unix seconds" }
+    SigningPackage:
+      type: object
+      additionalProperties: false
+      required: [claim_id, typed_data, digest, claim_value, claim_salt, evidence_value, evidence_salt]
+      properties:
+        claim_id: { type: string }
+        typed_data: { $ref: "#/components/schemas/TypedDataClaim" }
+        digest: { $ref: "#/components/schemas/Bytes32" }
+        claim_value: { $ref: "#/components/schemas/ClaimBody" }
+        claim_salt: { $ref: "#/components/schemas/Bytes32" }
+        evidence_value:
+          type: object
+          additionalProperties: false
+          required: [excerpt]
+          properties:
+            excerpt: { type: string }
+        evidence_salt: { $ref: "#/components/schemas/Bytes32" }
+    WorldResult:
+      type: object
+      description: |
+        OPAQUE to everything except the WorldVerifier adapter in apps/api. Agent B passes through exactly what the World SDK
+        returned, plus the `adapter` tag naming which flow produced it. Do not interpret or reshape.
+      additionalProperties: true
+      required: [adapter, payload]
+      properties:
+        adapter: { type: string, enum: [agent_pass, idkit, mock] }
+        payload: { type: object, additionalProperties: true }
+    CosignGrant:
+      type: object
+      additionalProperties: false
+      required: [grant_id, claim_id, auth_method, expires_at, url, token]
+      properties:
+        grant_id: { type: string }
+        claim_id: { type: string }
+        auth_method: { $ref: "#/components/schemas/CosignAuthMethod" }
+        expires_at: { $ref: "#/components/schemas/Timestamp" }
+        url: { type: string, description: "Frontend path + token fragment, e.g. /cosign#token=...; fragment is never sent to servers." }
+        token: { type: string, description: "Shown once." }
+    CosignView:
+      type: object
+      additionalProperties: false
+      required: [claim_id, auth_method, requester_display_name, body, evidence_excerpt, typed_data, expires_at]
+      properties:
+        claim_id: { type: string }
+        auth_method: { $ref: "#/components/schemas/CosignAuthMethod" }
+        requester_display_name: { type: string }
+        body: { $ref: "#/components/schemas/ClaimBody" }
+        evidence_excerpt: { type: string }
+        typed_data: { $ref: "#/components/schemas/TypedDataClaim" }
+        employee_signature: { $ref: "#/components/schemas/Signature" }
+        expires_at: { $ref: "#/components/schemas/Timestamp" }
+        world_action: { type: string, description: "Action string the World proof must bind to (only when auth_method=world_id)." }
+    EvidenceStatus: { type: string, enum: [unverified, verified, provisional, vested, disputed, reverted, superseded, rejected, shredded] }
+    EvidenceSource: { type: string, enum: [github, tickets, crm, hris, worklog, cosign, manual, dev] }
+    Observation:
+      type: object
+      additionalProperties: false
+      required: [metric_key, value]
+      properties:
+        metric_key: { type: string }
+        value: { type: integer, description: "Integer in the metric's natural unit (count, minutes, bps, currency minor units)." }
+    EvidenceItem:
+      type: object
+      additionalProperties: false
+      required: [evidence_id, employee_id, cycle_id, source, kind, status, observed_at, commitment, observations, seq, prev_hash, event_hash]
+      properties:
+        evidence_id: { type: string }
+        employee_id: { type: string }
+        cycle_id: { type: string }
+        source: { $ref: "#/components/schemas/EvidenceSource" }
+        kind: { type: string, description: "e.g. pr_merged, pr_reverted, bug_fixed, ticket_closed, deal_closed, campaign_milestone, client_cosign, review_done." }
+        ref: { type: [string, "null"], description: "External reference like gh:acme/core#101." }
+        status: { $ref: "#/components/schemas/EvidenceStatus" }
+        observed_at: { $ref: "#/components/schemas/Timestamp" }
+        observations: { type: array, items: { $ref: "#/components/schemas/Observation" } }
+        severity: { type: [string, "null"], enum: [P0, P1, P2, P3, null] }
+        self_introduced: { type: boolean }
+        share_bps: { type: integer, minimum: 0, maximum: 10000 }
+        links:
+          type: object
+          additionalProperties: false
+          properties:
+            reverts_evidence_id: { type: [string, "null"] }
+            supersedes_evidence_id: { type: [string, "null"] }
+            claim_id: { type: [string, "null"] }
+        commitment: { $ref: "#/components/schemas/Bytes32" }
+        batch_id: { type: [string, "null"] }
+        merkle_proof: { type: [array, "null"], items: { $ref: "#/components/schemas/Bytes32" } }
+        seq: { type: integer, minimum: 1 }
+        prev_hash: { $ref: "#/components/schemas/Bytes32" }
+        event_hash: { $ref: "#/components/schemas/Bytes32" }
+        replica: { type: object, additionalProperties: false, properties: { zg_root: { type: [string, "null"] }, status: { type: string, enum: [none, pending, stored, failed, shredded] } } }
+    EvidenceIngest:
+      type: object
+      additionalProperties: false
+      required: [employee_id, cycle_id, source, kind, observed_at, observations]
+      properties:
+        employee_id: { type: string }
+        cycle_id: { type: string }
+        source: { $ref: "#/components/schemas/EvidenceSource" }
+        kind: { type: string }
+        ref: { type: [string, "null"] }
+        observed_at: { $ref: "#/components/schemas/Timestamp" }
+        observations: { type: array, items: { $ref: "#/components/schemas/Observation" } }
+        severity: { type: [string, "null"], enum: [P0, P1, P2, P3, null] }
+        self_introduced: { type: boolean }
+        share_bps: { type: integer, minimum: 0, maximum: 10000 }
+        reverts_ref: { type: [string, "null"], description: "ref of the evidence item being reverted." }
+        raw: { type: object, additionalProperties: true, description: "Untrusted raw payload. Stored encrypted; never fed to the scoring engine." }
+    Run:
+      type: object
+      additionalProperties: false
+      required: [run_id, employee_id, cycle_id, status, tool_calls, evidence_ids, started_at]
+      properties:
+        run_id: { type: string }
+        employee_id: { type: string }
+        cycle_id: { type: string }
+        status: { type: string, enum: [queued, running, succeeded, failed] }
+        tool_calls:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [tool, ok]
+            properties:
+              tool: { type: string, enum: [git, tickets, crm, hris, worklog] }
+              ok: { type: boolean }
+              items_found: { type: integer }
+              note: { type: string }
+        evidence_ids: { type: array, items: { type: string } }
+        inference: { $ref: "#/components/schemas/InferenceRecord" }
+        agent_identity: { type: object, additionalProperties: false, properties: { ens_name: { type: string }, address: { $ref: "#/components/schemas/Address" }, agent_pass: { type: string, enum: [verified, mock, unverified] } } }
+        error: { type: [string, "null"] }
+        started_at: { $ref: "#/components/schemas/Timestamp" }
+        finished_at: { type: [string, "null"] }
+    ComputeRequest:
+      type: object
+      additionalProperties: false
+      required: [plan_id, employee_id, cycle_id]
+      properties:
+        plan_id: { type: string }
+        employee_id: { type: string }
+        cycle_id: { type: string }
+        as_of: { $ref: "#/components/schemas/Timestamp" }
+        override_actuals:
+          type: object
+          description: "Sandbox what-if: kra_id -> integer actual. When present, evidence is ignored for those KRAs."
+          additionalProperties: { type: integer }
+    ScoreLine:
+      type: object
+      additionalProperties: false
+      required: [kra_id, actual, target, attainment_ppm, capped_ppm, weight_bps, contribution_ppm]
+      properties:
+        kra_id: { type: string }
+        actual: { type: integer }
+        target: { type: integer }
+        attainment_ppm: { type: integer }
+        capped_ppm: { type: integer }
+        weight_bps: { type: integer }
+        contribution_ppm: { type: integer }
+        evidence_ids: { type: array, items: { type: string } }
+    ComputeResult:
+      type: object
+      additionalProperties: false
+      required: [plan_id, formula_hash, lines, score_ppm, score_bps, verified_ratio_bps, gate_passed, multiplier_bps, bonus_amount, inputs_hash]
+      properties:
+        plan_id: { type: string }
+        formula_hash: { $ref: "#/components/schemas/Bytes32" }
+        lines: { type: array, items: { $ref: "#/components/schemas/ScoreLine" } }
+        score_ppm: { type: integer }
+        score_bps: { type: integer }
+        carry_forward:
+          type: object
+          additionalProperties: false
+          properties:
+            prior_score_bps: { type: [integer, "null"] }
+            history_weight_bps: { type: integer }
+            blended_score_bps: { type: integer }
+            open_items: { type: array, items: { type: string } }
+        bug_credit:
+          type: object
+          additionalProperties: false
+          properties:
+            tiers_milli: { type: object, additionalProperties: { type: integer } }
+            total_milli: { type: integer }
+        commission:
+          type: object
+          additionalProperties: false
+          description: "Only for plans of kind tiered_commission. Whole-currency units (USD); bonus_amount = payout x 1000000."
+          properties:
+            attainment_bps: { type: integer }
+            base: { type: integer }
+            accelerated: { type: integer }
+            payout: { type: integer }
+        verified_ratio_bps: { type: integer }
+        gate_passed: { type: boolean }
+        multiplier_bps: { type: integer }
+        bonus_amount: { $ref: "#/components/schemas/Amount" }
+        inputs_hash: { $ref: "#/components/schemas/Bytes32" }
+        warnings: { type: array, items: { type: string } }
+    ScorecardStatus: { type: string, enum: [draft, pending_approval, approved, denied, attested, superseded, revoked] }
+    Scorecard:
+      type: object
+      additionalProperties: false
+      required: [scorecard_id, employee_id, cycle_id, version, status, result, evidence_ids, created_at]
+      properties:
+        scorecard_id: { type: string }
+        employee_id: { type: string }
+        cycle_id: { type: string }
+        version: { type: integer, minimum: 1 }
+        supersedes_scorecard_id: { type: [string, "null"] }
+        revision_reason: { type: [string, "null"] }
+        status: { $ref: "#/components/schemas/ScorecardStatus" }
+        result: { $ref: "#/components/schemas/ComputeResult" }
+        evidence_ids: { type: array, items: { type: string } }
+        evidence_root: { $ref: "#/components/schemas/Bytes32" }
+        score_commitment: { $ref: "#/components/schemas/Bytes32" }
+        subject_id: { $ref: "#/components/schemas/Bytes32" }
+        approval_id: { type: [string, "null"] }
+        needs_revision: { type: boolean, description: "True when evidence used by this scorecard was reverted/superseded after it was computed. A human then calls /revise." }
+        attestation: { oneOf: [{ $ref: "#/components/schemas/AttestationRef" }, { type: "null" }] }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+    ScorecardDiff:
+      type: object
+      additionalProperties: false
+      required: [from_id, to_id, score_bps_delta, multiplier_bps_delta, line_changes, evidence_added, evidence_removed]
+      properties:
+        from_id: { type: string }
+        to_id: { type: string }
+        score_bps_delta: { type: integer }
+        multiplier_bps_delta: { type: integer }
+        bonus_amount_delta: { type: string, pattern: "^-?[0-9]+$" }
+        line_changes:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [kra_id, actual_from, actual_to, contribution_ppm_delta]
+            properties:
+              kra_id: { type: string }
+              actual_from: { type: integer }
+              actual_to: { type: integer }
+              contribution_ppm_delta: { type: integer }
+        evidence_added: { type: array, items: { type: string } }
+        evidence_removed: { type: array, items: { type: string } }
+    ApprovalStatus: { type: string, enum: [pending, approved, denied, cancelled, expired] }
+    Approval:
+      type: object
+      additionalProperties: false
+      required: [approval_id, scorecard_id, status, challenge, created_at]
+      properties:
+        approval_id: { type: string }
+        scorecard_id: { type: string }
+        status: { $ref: "#/components/schemas/ApprovalStatus" }
+        challenge: { $ref: "#/components/schemas/Bytes32" }
+        world_action: { type: string, description: "The action string the World step-up must be bound to." }
+        approver_employee_id: { type: [string, "null"] }
+        comment: { type: [string, "null"] }
+        approval_proof_hash: { oneOf: [{ $ref: "#/components/schemas/Bytes32" }, { type: "null" }] }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+        decided_at: { type: [string, "null"] }
+    AnchorBatch:
+      type: object
+      additionalProperties: false
+      required: [batch_id, numeric_id, root, count, tx_hash, chain_mode, anchored_at]
+      properties:
+        batch_id: { type: string }
+        numeric_id: { type: integer, minimum: 1 }
+        root: { $ref: "#/components/schemas/Bytes32" }
+        count: { type: integer }
+        evidence_ids: { type: array, items: { type: string } }
+        tx_hash: { $ref: "#/components/schemas/Bytes32" }
+        chain_mode: { type: string, enum: [mock, live] }
+        explorer_url: { type: [string, "null"] }
+        anchored_at: { $ref: "#/components/schemas/Timestamp" }
+    AttestationRef:
+      type: object
+      additionalProperties: false
+      required: [attestation_id, scorecard_id, version, tx_hash, chain_mode, attested_at]
+      properties:
+        attestation_id: { type: integer, minimum: 1 }
+        scorecard_id: { type: string }
+        version: { type: integer }
+        supersedes_attestation_id: { type: [integer, "null"] }
+        tx_hash: { $ref: "#/components/schemas/Bytes32" }
+        chain_mode: { type: string, enum: [mock, live] }
+        explorer_url: { type: [string, "null"] }
+        attested_at: { $ref: "#/components/schemas/Timestamp" }
+    PayoutStatus: { type: string, enum: [none, registered, active, disputed, closed] }
+    Payout:
+      type: object
+      additionalProperties: false
+      required: [scorecard_id, status, payee, target_bonus, entitlement, paid, held, forfeited, overpaid]
+      properties:
+        scorecard_id: { type: string }
+        status: { $ref: "#/components/schemas/PayoutStatus" }
+        payee: { $ref: "#/components/schemas/Address" }
+        target_bonus: { $ref: "#/components/schemas/Amount" }
+        entitlement: { $ref: "#/components/schemas/Amount" }
+        paid: { $ref: "#/components/schemas/Amount" }
+        held: { $ref: "#/components/schemas/Amount" }
+        forfeited: { $ref: "#/components/schemas/Amount" }
+        overpaid: { $ref: "#/components/schemas/Amount" }
+        maturity_at: { type: [string, "null"] }
+        last_tx_hash: { oneOf: [{ $ref: "#/components/schemas/Bytes32" }, { type: "null" }] }
+        explorer_url: { type: [string, "null"] }
+    VerifyRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, id]
+      properties:
+        kind: { type: string, enum: [evidence, scorecard, claim] }
+        id: { type: string }
+        reveal:
+          type: object
+          additionalProperties: false
+          description: What the verifier was shown. For claims, claim and evidence reveals are both accepted.
+          properties:
+            value: { type: object, additionalProperties: true }
+            salt: { $ref: "#/components/schemas/Bytes32" }
+            evidence_value: { type: object, additionalProperties: true }
+            evidence_salt: { $ref: "#/components/schemas/Bytes32" }
+    VerifyResult:
+      type: object
+      additionalProperties: false
+      required: [ok, kind, id, checks]
+      properties:
+        ok: { type: boolean }
+        kind: { type: string }
+        id: { type: string }
+        checks:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, ok]
+            properties:
+              name:
+                type: string
+                enum: [commitment_matches, merkle_proof_valid, root_anchored_on_chain, attestation_not_revoked, employee_signature_valid, cosigner_signature_valid, hash_chain_intact, formula_hash_matches, evidence_not_shredded]
+              ok: { type: boolean }
+              detail: { type: string }
+    AuditEntry:
+      type: object
+      additionalProperties: false
+      required: [seq, at, actor, action, subject, prev_hash, event_hash]
+      properties:
+        seq: { type: integer }
+        at: { $ref: "#/components/schemas/Timestamp" }
+        actor: { type: string, description: "persona_id | system | agent | connector:<name> | cosigner:<claim_id>" }
+        action: { type: string }
+        subject: { type: string }
+        detail: { type: object, additionalProperties: true }
+        prev_hash: { $ref: "#/components/schemas/Bytes32" }
+        event_hash: { $ref: "#/components/schemas/Bytes32" }
+    PublicConfig:
+      type: object
+      additionalProperties: false
+      required: [spec_version, org_name, auth_mode, chain_mode, chain, contracts, eip712_domain, world_mode, zerog_mode, agent]
+      properties:
+        spec_version: { type: string }
+        org_name: { type: string }
+        auth_mode: { type: string, enum: [dev, sso] }
+        chain_mode: { type: string, enum: [mock, live] }
+        chain:
+          type: object
+          additionalProperties: false
+          required: [chain_id, name]
+          properties:
+            chain_id: { type: integer }
+            name: { type: string }
+            rpc_url: { type: [string, "null"] }
+            explorer_base_url: { type: [string, "null"] }
+        contracts:
+          type: object
+          additionalProperties: false
+          required: [registry, vault, asset]
+          properties:
+            registry: { $ref: "#/components/schemas/Address" }
+            vault: { $ref: "#/components/schemas/Address" }
+            asset: { $ref: "#/components/schemas/Address" }
+        eip712_domain:
+          type: object
+          additionalProperties: false
+          required: [name, version, chainId, verifyingContract]
+          properties:
+            name: { type: string, const: Proofwork }
+            version: { type: string, const: "1" }
+            chainId: { type: integer }
+            verifyingContract: { $ref: "#/components/schemas/Address" }
+        world_mode: { type: string, enum: [mock, live] }
+        world_app_id: { type: [string, "null"] }
+        zerog_mode: { type: string, enum: [mock, live] }
+        ens:
+          type: object
+          additionalProperties: false
+          properties:
+            network: { type: string, enum: [sepolia, mainnet, none] }
+            parent_name: { type: [string, "null"] }
+        agent:
+          type: object
+          additionalProperties: false
+          required: [ens_name, address]
+          properties:
+            ens_name: { type: string }
+            address: { $ref: "#/components/schemas/Address" }

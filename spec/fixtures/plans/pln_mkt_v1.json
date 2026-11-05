@@ -1,0 +1,93 @@
+{
+  "plan_id": "pln_mkt_v1",
+  "name": "Marketing Executive - H2 bonus",
+  "department": "marketing",
+  "kind": "target_attainment",
+  "target_bonus": "5000000000",
+  "holdback_bps": 2000,
+  "maturity_days": 90,
+  "payout_curve": [
+    [
+      0,
+      0
+    ],
+    [
+      7000,
+      5000
+    ],
+    [
+      9000,
+      10000
+    ],
+    [
+      11000,
+      10000
+    ],
+    [
+      13000,
+      15000
+    ]
+  ],
+  "kras": [
+    {
+      "kra_id": "sourced_pipeline",
+      "label": "Marketing-sourced pipeline (USD)",
+      "weight_bps": 4000,
+      "direction": "higher_better",
+      "target": 2000000,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "sourced_pipeline_usd",
+      "agg": "sum",
+      "source": "crm",
+      "basis": "mkt_pipeline"
+    },
+    {
+      "kra_id": "mql_to_sql",
+      "label": "MQL to SQL conversion (bps)",
+      "weight_bps": 2000,
+      "direction": "higher_better",
+      "target": 1500,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "mql_to_sql_bps",
+      "agg": "latest",
+      "source": "crm",
+      "basis": "mkt_pipeline"
+    },
+    {
+      "kra_id": "cost_per_sql",
+      "label": "Cost per SQL (USD)",
+      "weight_bps": 2000,
+      "direction": "lower_better",
+      "target": 500,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "cost_per_sql_usd",
+      "agg": "latest",
+      "source": "crm",
+      "basis": "mkt_pipeline"
+    },
+    {
+      "kra_id": "campaign_milestones",
+      "label": "Campaign milestones delivered",
+      "weight_bps": 2000,
+      "direction": "higher_better",
+      "target": 10,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "campaign_milestones",
+      "agg": "sum",
+      "source": "hris",
+      "basis": "mkt_campaign_plan"
+    }
+  ],
+  "gates": {
+    "min_verified_ratio_bps": 8000
+  },
+  "carry_forward": {
+    "history_weight_bps": 2000,
+    "open_item_decay_bps": 5000
+  },
+  "formula_hash": "0x73684b9a2193afefe0f41cc9cfb9817f3ab4812bd2c745d75391c89478495730"
+}

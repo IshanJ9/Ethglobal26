@@ -1,0 +1,10 @@
+{
+  "name": "@proofwork/crypto",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": { "test": "tsx --test test/*.test.ts" },
+  "dependencies": { "canonicalize": "2.0.0", "viem": "2.21.0" },
+  "devDependencies": { "tsx": "4.19.0", "typescript": "5.6.2", "@types/node": "22.7.0" }
+}

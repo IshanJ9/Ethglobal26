@@ -1,0 +1,1021 @@
+{
+  "bug_credit": {
+    "cases": [
+      {
+        "expected": {
+          "tiers_milli": {
+            "P0": 40000
+          },
+          "total_milli": 40000
+        },
+        "fixes": [
+          {
+            "severity": "P0"
+          }
+        ],
+        "name": "dev_a_one_p0"
+      },
+      {
+        "expected": {
+          "tiers_milli": {
+            "P3": 10000
+          },
+          "total_milli": 10000
+        },
+        "fixes": [
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          },
+          {
+            "severity": "P3"
+          }
+        ],
+        "name": "dev_b_twenty_p3"
+      },
+      {
+        "expected": {
+          "tiers_milli": {
+            "P0": 120000
+          },
+          "total_milli": 120000
+        },
+        "fixes": [
+          {
+            "severity": "P0"
+          },
+          {
+            "severity": "P0"
+          },
+          {
+            "severity": "P0"
+          },
+          {
+            "severity": "P0"
+          }
+        ],
+        "name": "dev_c_four_p0_capped"
+      },
+      {
+        "expected": {
+          "tiers_milli": {
+            "P0": 0
+          },
+          "total_milli": 0
+        },
+        "fixes": [
+          {
+            "self_introduced": true,
+            "severity": "P0"
+          }
+        ],
+        "name": "self_introduced_p0_zero"
+      },
+      {
+        "expected": {
+          "tiers_milli": {
+            "P1": 9000
+          },
+          "total_milli": 9000
+        },
+        "fixes": [
+          {
+            "severity": "P1",
+            "share_bps": 6000
+          }
+        ],
+        "name": "fixer_share_60pct"
+      }
+    ],
+    "policy": {
+      "severity": {
+        "P0": {
+          "full_credit_count": 3,
+          "tier_cap_milli": 120000,
+          "weight_milli": 40000
+        },
+        "P1": {
+          "full_credit_count": 4,
+          "tier_cap_milli": 60000,
+          "weight_milli": 15000
+        },
+        "P2": {
+          "full_credit_count": 5,
+          "tier_cap_milli": 25000,
+          "weight_milli": 5000
+        },
+        "P3": {
+          "full_credit_count": 5,
+          "tier_cap_milli": 10000,
+          "weight_milli": 1000
+        }
+      },
+      "share_defaults": {
+        "finder_bps": 2000,
+        "fixer_bps": 6000,
+        "reviewer_bps": 2000
+      },
+      "taper_bps": 5000
+    }
+  },
+  "canonical_json": [
+    {
+      "canonical": "{\"a\":[true,null,\"x\"],\"b\":1}",
+      "input": {
+        "a": [
+          true,
+          null,
+          "x"
+        ],
+        "b": 1
+      },
+      "keccak": "0x9b26c279cfa2a1ba5e389b16dfa5e366052f224987b44a6454399a2043133e42"
+    },
+    {
+      "canonical": "{\"n\":-7,\"summary\":\"Client call with Acme CFO ₹ pricing – नमस्ते\",\"z\":0}",
+      "input": {
+        "n": -7,
+        "summary": "Client call with Acme CFO ₹ pricing – नमस्ते",
+        "z": 0
+      },
+      "keccak": "0x52e38eacc37778138f6baa6b6d5c929fe5fa5e2b4dbd02f3d000e9c536627c5e"
+    },
+    {
+      "canonical": "{\"arr\":[[],{},[1,[2]]],\"nested\":{\"y\":{\"a\":\"\",\"b\":\"line\\nbreak \\\"quoted\\\" back\\\\slash\\ttab\"}}}",
+      "input": {
+        "arr": [
+          [],
+          {},
+          [
+            1,
+            [
+              2
+            ]
+          ]
+        ],
+        "nested": {
+          "y": {
+            "a": "",
+            "b": "line\nbreak \"quoted\" back\\slash\ttab"
+          }
+        }
+      },
+      "keccak": "0x7be0571684eff50397af9747ca0c187b30d6872c79bb5822052897afedb64529"
+    }
+  ],
+  "carry_forward_cases": [
+    {
+      "blended_bps": 9716,
+      "cur_bps": 10145,
+      "prior_bps": 8000,
+      "w_bps": 2000
+    },
+    {
+      "blended_bps": 9650,
+      "cur_bps": 9500,
+      "prior_bps": 10000,
+      "w_bps": 3000
+    },
+    {
+      "blended_bps": 10000,
+      "cur_bps": 10001,
+      "prior_bps": 9999,
+      "w_bps": 3333
+    },
+    {
+      "blended_bps": 9000,
+      "cur_bps": 9000,
+      "prior_bps": 9000,
+      "w_bps": 0
+    }
+  ],
+  "commitments": [
+    {
+      "commitment": "0x7f990778aa6f2bdde4427b6b15484de4f3a3ef63248618eff18a04f42344f081",
+      "salt": "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "value": {
+        "counterparty_label": "Acme Bank CFO",
+        "duration_minutes": 45,
+        "kind": "client_call",
+        "occurred_on": "2026-10-14",
+        "schema": "pw.claim.v1",
+        "summary": "Agreed revised onboarding timeline with Acme CFO"
+      }
+    },
+    {
+      "commitment": "0xe33ba2fc83c60c7a8fb46815d5987ebc02971fc10834e0e55ba16684771f2f5a",
+      "salt": "0xabababababababababababababababababababababababababababababababab",
+      "value": {
+        "excerpt": "Call notes: timeline moves to Q1"
+      }
+    }
+  ],
+  "curve_cases": [
+    {
+      "multiplier_bps": 0,
+      "score_bps": 0
+    },
+    {
+      "multiplier_bps": 2142,
+      "score_bps": 3000
+    },
+    {
+      "multiplier_bps": 4999,
+      "score_bps": 6999
+    },
+    {
+      "multiplier_bps": 5000,
+      "score_bps": 7000
+    },
+    {
+      "multiplier_bps": 7500,
+      "score_bps": 8000
+    },
+    {
+      "multiplier_bps": 10000,
+      "score_bps": 9000
+    },
+    {
+      "multiplier_bps": 10000,
+      "score_bps": 10145
+    },
+    {
+      "multiplier_bps": 10000,
+      "score_bps": 11000
+    },
+    {
+      "multiplier_bps": 12500,
+      "score_bps": 12000
+    },
+    {
+      "multiplier_bps": 15000,
+      "score_bps": 13000
+    },
+    {
+      "multiplier_bps": 15000,
+      "score_bps": 14000
+    }
+  ],
+  "eip712": {
+    "TEST_ONLY_WARNING": "chainId/verifyingContract are dummy test values. Real values come from /v1/config/public.",
+    "claim_salt": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "claim_value": {
+      "counterparty_label": "Acme Bank CFO",
+      "duration_minutes": 45,
+      "kind": "client_call",
+      "occurred_on": "2026-10-14",
+      "schema": "pw.claim.v1",
+      "summary": "Agreed revised onboarding timeline with Acme CFO"
+    },
+    "cosigner_persona": "p_client_cfo",
+    "cosigner_private_key": "0x5e1016db0f95fb34fb35385cc9cf86e81fee6c8707fe6bc3498326b849e9c7ca",
+    "cosigner_signature": "0x0737a9e4822a516df07cd26112270b3c7d0f3f11d04427bfa79650ced4c85bc210d2c53ee1be4422ee4b84e3edb8e1075d463cf6255b56e730514b3f8e327ff21b",
+    "digest": "0xff09761bfaa45484d0329c106b5254ec6f0650cb3fc6b4e948bed21e28e66b26",
+    "domain": {
+      "chainId": 31337,
+      "name": "Proofwork",
+      "verifyingContract": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "version": "1"
+    },
+    "employee_persona": "p_dev_a",
+    "employee_private_key": "0x0c6fc77312aed3852959d66254b90653ec785cd00a37243204b157a13a42a0ca",
+    "employee_signature": "0x240cd41d148eee758c9e51759e160334a19ace83f866adcb2e2c32616fadac2850014e8847952b24efd1f30fde62a19414f98bf5ca7c99b9ae4b503265d4e0e41c",
+    "evidence_salt": "0x2222222222222222222222222222222222222222222222222222222222222222",
+    "evidence_value": {
+      "excerpt": "CFO: we can move go-live to January if the API is ready by 15 Dec"
+    },
+    "kra_id_string": "client_engagement",
+    "message": {
+      "claimCommitment": "0x7f990778aa6f2bdde4427b6b15484de4f3a3ef63248618eff18a04f42344f081",
+      "cosigner": "0xDD0F57c26b23999240Fd524Ee43a4f918BbA7415",
+      "cycleId": 2026,
+      "deadline": 1893456000,
+      "employee": "0xe0A6B36D1381B1844A569acecde5501cA3Aca9c1",
+      "evidenceCommitment": "0x48aadec11db4799aeca0b88ab5d296e950a6a7137e938f337fd4a8df2f3b4999",
+      "kraId": "0xbc7e79363f24cccd99a53293838941eee90f3212d43fd1deed7dbaa61df77133",
+      "nonce": 1
+    },
+    "primaryType": "Claim",
+    "types": {
+      "Claim": [
+        {
+          "name": "employee",
+          "type": "address"
+        },
+        {
+          "name": "claimCommitment",
+          "type": "bytes32"
+        },
+        {
+          "name": "evidenceCommitment",
+          "type": "bytes32"
+        },
+        {
+          "name": "cycleId",
+          "type": "uint64"
+        },
+        {
+          "name": "kraId",
+          "type": "bytes32"
+        },
+        {
+          "name": "cosigner",
+          "type": "address"
+        },
+        {
+          "name": "nonce",
+          "type": "uint256"
+        },
+        {
+          "name": "deadline",
+          "type": "uint64"
+        }
+      ]
+    }
+  },
+  "hash_chain": [
+    {
+      "core": {
+        "kind": "pr_merged",
+        "ref": "gh:acme/core#101",
+        "seq": 1
+      },
+      "event_hash": "0x176118c90da7577fbec7402236f7eecb2b8da6803701470114dcfd8e2888fc19",
+      "prev_hash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "core": {
+        "kind": "pr_reverted",
+        "ref": "gh:acme/core#101",
+        "seq": 2
+      },
+      "event_hash": "0x11d02a69dd21a433a8ec9c960de31bf6aa629511be1272518be84c142da3a6d2",
+      "prev_hash": "0x176118c90da7577fbec7402236f7eecb2b8da6803701470114dcfd8e2888fc19"
+    },
+    {
+      "core": {
+        "kind": "bug_fixed",
+        "ref": "JIRA-9",
+        "seq": 3
+      },
+      "event_hash": "0xe4a5a176580f0ff3321a22fc1d0d986c60812c2a845a0a032faa1dd3f5b5f516",
+      "prev_hash": "0x11d02a69dd21a433a8ec9c960de31bf6aa629511be1272518be84c142da3a6d2"
+    }
+  ],
+  "merkle": {
+    "commitments": [
+      "0xdfc2a22c1edd04f7a5371866433c145f91f9c9ceacc81f7746aca4159f6b9f10",
+      "0x5540c907a67836394b4fdc3893bf8fa4a744fae0ebc08b90c145e5a47c71f036",
+      "0xa3c678533d5ca8dbf4706cdeab917067f97b6f14145e157b71013191d3094dd7",
+      "0x3c44078a511219d4e4d5d6ae7981b5c7bbc9326357e96e3ccdc205eda9f45830",
+      "0x3cd6959a37b7c057a290f152ac01692f350becc6578c3a874e99fe16f64b3d46"
+    ],
+    "proofs": {
+      "0x3c44078a511219d4e4d5d6ae7981b5c7bbc9326357e96e3ccdc205eda9f45830": [
+        "0x6c0a5bb00977b49584d94720b1f0eb2114fca7c77b5c5d12a24091851e48c1ea"
+      ],
+      "0x3cd6959a37b7c057a290f152ac01692f350becc6578c3a874e99fe16f64b3d46": [
+        "0xafea0039da1026ee9f5c10089aafe91a0a1dcdcb6e6ad0624de111de4d72b6da",
+        "0xa79899f99f3491124de6d99243cf54a682e37f5bc71feb701df03643168b35d1",
+        "0xb7f70ec8d322f76217251dbda9e135d8f3681198cfbfd77a8a1913cab5a22538"
+      ],
+      "0x5540c907a67836394b4fdc3893bf8fa4a744fae0ebc08b90c145e5a47c71f036": [
+        "0x581a90ad5e68f4be6bb22d19c0638c1c8dbe18db46bbe4ec939780d215e06e3f",
+        "0xa79899f99f3491124de6d99243cf54a682e37f5bc71feb701df03643168b35d1",
+        "0xb7f70ec8d322f76217251dbda9e135d8f3681198cfbfd77a8a1913cab5a22538"
+      ],
+      "0xa3c678533d5ca8dbf4706cdeab917067f97b6f14145e157b71013191d3094dd7": [
+        "0x53e7e0c44c099685b836657e991a2bc1599f4d37aa7dfc48a5af687ea5eae6b5",
+        "0xc3a023e738400e630585b6c5036cb860f941af16f519f900281d75a6445730e8",
+        "0xb7f70ec8d322f76217251dbda9e135d8f3681198cfbfd77a8a1913cab5a22538"
+      ],
+      "0xdfc2a22c1edd04f7a5371866433c145f91f9c9ceacc81f7746aca4159f6b9f10": [
+        "0x1192c19cb6a04019a5c93aee5185494656f428a9c44c49f8741666c1429a03e5",
+        "0xc3a023e738400e630585b6c5036cb860f941af16f519f900281d75a6445730e8",
+        "0xb7f70ec8d322f76217251dbda9e135d8f3681198cfbfd77a8a1913cab5a22538"
+      ]
+    },
+    "root": "0xebb03fc1f7a717320dce67b006c3b0beacb2d9ecc56ab45c64f9608edf7a4500",
+    "single": {
+      "commitment": "0xdfc2a22c1edd04f7a5371866433c145f91f9c9ceacc81f7746aca4159f6b9f10",
+      "proof": [],
+      "root": "0x53e7e0c44c099685b836657e991a2bc1599f4d37aa7dfc48a5af687ea5eae6b5"
+    },
+    "sorted_leaves": [
+      "0x1192c19cb6a04019a5c93aee5185494656f428a9c44c49f8741666c1429a03e5",
+      "0x53e7e0c44c099685b836657e991a2bc1599f4d37aa7dfc48a5af687ea5eae6b5",
+      "0x581a90ad5e68f4be6bb22d19c0638c1c8dbe18db46bbe4ec939780d215e06e3f",
+      "0xafea0039da1026ee9f5c10089aafe91a0a1dcdcb6e6ad0624de111de4d72b6da",
+      "0xb7f70ec8d322f76217251dbda9e135d8f3681198cfbfd77a8a1913cab5a22538"
+    ],
+    "tamper_negative": {
+      "commitment": "0xc01f1ff14d700bcd6fc919e90c0249a67cd44313ba5d2daa0aaa0c39b5cdf9b0",
+      "must_not_verify_against": "0xebb03fc1f7a717320dce67b006c3b0beacb2d9ecc56ab45c64f9608edf7a4500"
+    }
+  },
+  "note": "GENERATED by spec/vectors/generate.py - do not edit by hand.",
+  "payout_curve_default": [
+    [
+      0,
+      0
+    ],
+    [
+      7000,
+      5000
+    ],
+    [
+      9000,
+      10000
+    ],
+    [
+      11000,
+      10000
+    ],
+    [
+      13000,
+      15000
+    ]
+  ],
+  "payout_split_cases": [
+    {
+      "expected": {
+        "entitlement": "5000000000",
+        "held": "1000000000",
+        "immediate": "4000000000"
+      },
+      "holdback_bps": 2000,
+      "multiplier_bps": 10000,
+      "target_bonus": "5000000000"
+    }
+  ],
+  "persona_addresses": {
+    "p_ae": "0x0080219E7Db838dd56C24c5E96F547D08DfAD352",
+    "p_client_cfo": "0xDD0F57c26b23999240Fd524Ee43a4f918BbA7415",
+    "p_dev_a": "0xe0A6B36D1381B1844A569acecde5501cA3Aca9c1",
+    "p_dev_b": "0xDD9BF67e531Cc092D3695381B060B93cae557035",
+    "p_dev_c": "0xC14372935dD977Eace9b673c4d21Fb466f9Cc025",
+    "p_eng_mgr": "0x533cD3D69794436c3BF8ef0F1Eca50f3782dBbFa",
+    "p_hr": "0x148e33e153c6c93bC91CAC71D16487B93c52abD7",
+    "p_mkt_exec": "0x2dF3fABb156F51615aB02AC214482a1dBDAFa35e",
+    "p_mkt_mgr": "0x75C989274262d545B872F298B1173951A97af8fD",
+    "p_sales_mgr": "0x44D6852BD76d643575563ef1078d87db58C3d0D6"
+  },
+  "persona_key_rule": "private_key = keccak256(utf8('proofwork-demo-persona:' + persona_id)). DEMO ONLY - never holds real funds.",
+  "revision_cases": [
+    {
+      "expected": {
+        "extra_owed": "0",
+        "forfeited": "1000000000",
+        "held_remaining": "0",
+        "new_entitlement": "3750000000",
+        "overpaid": "250000000"
+      },
+      "held": "1000000000",
+      "name": "downward_big",
+      "new_multiplier_bps": 7500,
+      "paid": "4000000000",
+      "target_bonus": "5000000000"
+    },
+    {
+      "expected": {
+        "extra_owed": "0",
+        "forfeited": "250000000",
+        "held_remaining": "750000000",
+        "new_entitlement": "4750000000",
+        "overpaid": "0"
+      },
+      "held": "1000000000",
+      "name": "downward_small",
+      "new_multiplier_bps": 9500,
+      "paid": "4000000000",
+      "target_bonus": "5000000000"
+    },
+    {
+      "expected": {
+        "extra_owed": "1000000000",
+        "forfeited": "0",
+        "held_remaining": "2000000000",
+        "new_entitlement": "6000000000",
+        "overpaid": "0"
+      },
+      "held": "1000000000",
+      "name": "upward",
+      "new_multiplier_bps": 12000,
+      "paid": "4000000000",
+      "target_bonus": "5000000000"
+    }
+  ],
+  "score_commitment": {
+    "commitment": "0x4fa87c32492b8e7cd5b1013603c88103cb6df2de77f9c74d9cf6496e4aeba224",
+    "salt": "0xc3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+    "value": {
+      "cycle_id": 2026,
+      "employee_id": "00000000-0000-4000-8000-0000000000a1",
+      "evidence_root": "0xebb03fc1f7a717320dce67b006c3b0beacb2d9ecc56ab45c64f9608edf7a4500",
+      "formula_hash": "0xfafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa",
+      "multiplier_bps": 10000,
+      "score_bps": 10145,
+      "version": 1
+    }
+  },
+  "spec_version": "1.0.0",
+  "subject_id": {
+    "cycle_id": 2026,
+    "employee_id": "00000000-0000-4000-8000-0000000000a1",
+    "org_secret": "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+    "subject_id": "0x65cf0b7820a4e68d02a071618906451e04aa81e65cd5bf6e04d62c3c9fbbd55a"
+  },
+  "tiered_commission_cases": [
+    {
+      "accelerator_bps": 15000,
+      "expected": {
+        "accelerated": 9000,
+        "attainment_bps": 11500,
+        "base": 40000,
+        "payout": 49000
+      },
+      "name": "ae_115pct",
+      "quota": 800000,
+      "rate_bps": 500,
+      "retention_bps": 10000,
+      "sales": 920000
+    },
+    {
+      "accelerator_bps": 15000,
+      "expected": {
+        "accelerated": 0,
+        "attainment_bps": 7500,
+        "base": 30000,
+        "payout": 30000
+      },
+      "name": "ae_75pct",
+      "quota": 800000,
+      "rate_bps": 500,
+      "retention_bps": 10000,
+      "sales": 600000
+    },
+    {
+      "accelerator_bps": 15000,
+      "expected": {
+        "accelerated": 9000,
+        "attainment_bps": 11500,
+        "base": 40000,
+        "payout": 44100
+      },
+      "name": "ae_115pct_retention_90",
+      "quota": 800000,
+      "rate_bps": 500,
+      "retention_bps": 9000,
+      "sales": 920000
+    }
+  ],
+  "weighted_scorecard_cases": [
+    {
+      "expected": {
+        "bonus_amount": "5000000000",
+        "gate_passed": true,
+        "lines": [
+          {
+            "attainment_ppm": 1150000,
+            "capped_ppm": 1150000,
+            "contribution_ppm": 460000,
+            "kra_id": "sourced_pipeline"
+          },
+          {
+            "attainment_ppm": 800000,
+            "capped_ppm": 800000,
+            "contribution_ppm": 160000,
+            "kra_id": "mql_to_sql"
+          },
+          {
+            "attainment_ppm": 1111111,
+            "capped_ppm": 1111111,
+            "contribution_ppm": 222222,
+            "kra_id": "cost_per_sql"
+          },
+          {
+            "attainment_ppm": 800000,
+            "capped_ppm": 800000,
+            "contribution_ppm": 160000,
+            "kra_id": "campaign_milestones"
+          }
+        ],
+        "multiplier_bps": 10000,
+        "score_bps": 10022,
+        "score_ppm": 1002222
+      },
+      "formula": "weighted_scorecard",
+      "kras": [
+        {
+          "actual": 2300000,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "sourced_pipeline",
+          "target": 2000000,
+          "weight_bps": 4000
+        },
+        {
+          "actual": 1200,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "mql_to_sql",
+          "target": 1500,
+          "weight_bps": 2000
+        },
+        {
+          "actual": 450,
+          "cap_ppm": 1200000,
+          "direction": "lower_better",
+          "floor_ppm": 0,
+          "kra_id": "cost_per_sql",
+          "target": 500,
+          "weight_bps": 2000
+        },
+        {
+          "actual": 8,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "campaign_milestones",
+          "target": 10,
+          "weight_bps": 2000
+        }
+      ],
+      "name": "marketing_exec_v1",
+      "payout_curve": [
+        [
+          0,
+          0
+        ],
+        [
+          7000,
+          5000
+        ],
+        [
+          9000,
+          10000
+        ],
+        [
+          11000,
+          10000
+        ],
+        [
+          13000,
+          15000
+        ]
+      ],
+      "target_bonus": "5000000000"
+    },
+    {
+      "expected": {
+        "bonus_amount": "5000000000",
+        "gate_passed": true,
+        "lines": [
+          {
+            "attainment_ppm": 900000,
+            "capped_ppm": 900000,
+            "contribution_ppm": 360000,
+            "kra_id": "deliverables"
+          },
+          {
+            "attainment_ppm": 1125000,
+            "capped_ppm": 1100000,
+            "contribution_ppm": 165000,
+            "kra_id": "code_reviews"
+          },
+          {
+            "attainment_ppm": 1500000,
+            "capped_ppm": 1200000,
+            "contribution_ppm": 300000,
+            "kra_id": "service_cfr"
+          },
+          {
+            "attainment_ppm": 947368,
+            "capped_ppm": 947368,
+            "contribution_ppm": 189473,
+            "kra_id": "incident_sla"
+          }
+        ],
+        "multiplier_bps": 10000,
+        "score_bps": 10145,
+        "score_ppm": 1014473
+      },
+      "formula": "weighted_scorecard",
+      "kras": [
+        {
+          "actual": 18,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "deliverables",
+          "target": 20,
+          "weight_bps": 4000
+        },
+        {
+          "actual": 45,
+          "cap_ppm": 1100000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "code_reviews",
+          "target": 40,
+          "weight_bps": 1500
+        },
+        {
+          "actual": 1000,
+          "cap_ppm": 1200000,
+          "direction": "lower_better",
+          "floor_ppm": 0,
+          "kra_id": "service_cfr",
+          "target": 1500,
+          "weight_bps": 2500
+        },
+        {
+          "actual": 9000,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "incident_sla",
+          "target": 9500,
+          "weight_bps": 2000
+        }
+      ],
+      "name": "engineer_v1",
+      "payout_curve": [
+        [
+          0,
+          0
+        ],
+        [
+          7000,
+          5000
+        ],
+        [
+          9000,
+          10000
+        ],
+        [
+          11000,
+          10000
+        ],
+        [
+          13000,
+          15000
+        ]
+      ],
+      "target_bonus": "5000000000"
+    },
+    {
+      "expected": {
+        "bonus_amount": "5000000000",
+        "gate_passed": true,
+        "lines": [
+          {
+            "attainment_ppm": 850000,
+            "capped_ppm": 850000,
+            "contribution_ppm": 340000,
+            "kra_id": "deliverables"
+          },
+          {
+            "attainment_ppm": 1125000,
+            "capped_ppm": 1100000,
+            "contribution_ppm": 165000,
+            "kra_id": "code_reviews"
+          },
+          {
+            "attainment_ppm": 1500000,
+            "capped_ppm": 1200000,
+            "contribution_ppm": 300000,
+            "kra_id": "service_cfr"
+          },
+          {
+            "attainment_ppm": 947368,
+            "capped_ppm": 947368,
+            "contribution_ppm": 189473,
+            "kra_id": "incident_sla"
+          }
+        ],
+        "multiplier_bps": 10000,
+        "score_bps": 9945,
+        "score_ppm": 994473
+      },
+      "formula": "weighted_scorecard",
+      "kras": [
+        {
+          "actual": 17,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "deliverables",
+          "target": 20,
+          "weight_bps": 4000
+        },
+        {
+          "actual": 45,
+          "cap_ppm": 1100000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "code_reviews",
+          "target": 40,
+          "weight_bps": 1500
+        },
+        {
+          "actual": 1000,
+          "cap_ppm": 1200000,
+          "direction": "lower_better",
+          "floor_ppm": 0,
+          "kra_id": "service_cfr",
+          "target": 1500,
+          "weight_bps": 2500
+        },
+        {
+          "actual": 9000,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "incident_sla",
+          "target": 9500,
+          "weight_bps": 2000
+        }
+      ],
+      "name": "engineer_v2_after_revert",
+      "payout_curve": [
+        [
+          0,
+          0
+        ],
+        [
+          7000,
+          5000
+        ],
+        [
+          9000,
+          10000
+        ],
+        [
+          11000,
+          10000
+        ],
+        [
+          13000,
+          15000
+        ]
+      ],
+      "target_bonus": "5000000000"
+    },
+    {
+      "expected": {
+        "bonus_amount": "0",
+        "gate_passed": false,
+        "lines": [
+          {
+            "attainment_ppm": 900000,
+            "capped_ppm": 900000,
+            "contribution_ppm": 360000,
+            "kra_id": "deliverables"
+          },
+          {
+            "attainment_ppm": 1125000,
+            "capped_ppm": 1100000,
+            "contribution_ppm": 165000,
+            "kra_id": "code_reviews"
+          },
+          {
+            "attainment_ppm": 1500000,
+            "capped_ppm": 1200000,
+            "contribution_ppm": 300000,
+            "kra_id": "service_cfr"
+          },
+          {
+            "attainment_ppm": 947368,
+            "capped_ppm": 947368,
+            "contribution_ppm": 189473,
+            "kra_id": "incident_sla"
+          }
+        ],
+        "multiplier_bps": 0,
+        "score_bps": 10145,
+        "score_ppm": 1014473
+      },
+      "formula": "weighted_scorecard",
+      "kras": [
+        {
+          "actual": 18,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "deliverables",
+          "target": 20,
+          "weight_bps": 4000
+        },
+        {
+          "actual": 45,
+          "cap_ppm": 1100000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "code_reviews",
+          "target": 40,
+          "weight_bps": 1500
+        },
+        {
+          "actual": 1000,
+          "cap_ppm": 1200000,
+          "direction": "lower_better",
+          "floor_ppm": 0,
+          "kra_id": "service_cfr",
+          "target": 1500,
+          "weight_bps": 2500
+        },
+        {
+          "actual": 9000,
+          "cap_ppm": 1200000,
+          "direction": "higher_better",
+          "floor_ppm": 0,
+          "kra_id": "incident_sla",
+          "target": 9500,
+          "weight_bps": 2000
+        }
+      ],
+      "min_verified_ratio_bps": 8000,
+      "name": "engineer_gate_fail",
+      "payout_curve": [
+        [
+          0,
+          0
+        ],
+        [
+          7000,
+          5000
+        ],
+        [
+          9000,
+          10000
+        ],
+        [
+          11000,
+          10000
+        ],
+        [
+          13000,
+          15000
+        ]
+      ],
+      "target_bonus": "5000000000",
+      "verified_ratio_bps": 7000
+    }
+  ]
+}

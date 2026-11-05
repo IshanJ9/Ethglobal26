@@ -1,0 +1,44 @@
+{
+  "_note": "Mirror of the frozen EIP-712 definition. Verified by spec-check against packages/crypto CLAIM_TYPES.",
+  "domainName": "Proofwork",
+  "domainVersion": "1",
+  "primaryType": "Claim",
+  "types": {
+    "Claim": [
+      {
+        "name": "employee",
+        "type": "address"
+      },
+      {
+        "name": "claimCommitment",
+        "type": "bytes32"
+      },
+      {
+        "name": "evidenceCommitment",
+        "type": "bytes32"
+      },
+      {
+        "name": "cycleId",
+        "type": "uint64"
+      },
+      {
+        "name": "kraId",
+        "type": "bytes32"
+      },
+      {
+        "name": "cosigner",
+        "type": "address"
+      },
+      {
+        "name": "nonce",
+        "type": "uint256"
+      },
+      {
+        "name": "deadline",
+        "type": "uint64"
+      }
+    ]
+  },
+  "typeString": "Claim(address employee,bytes32 claimCommitment,bytes32 evidenceCommitment,uint64 cycleId,bytes32 kraId,address cosigner,uint256 nonce,uint64 deadline)",
+  "testOnlyDigest": "0xff09761bfaa45484d0329c106b5254ec6f0650cb3fc6b4e948bed21e28e66b26"
+}
