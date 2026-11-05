@@ -1,0 +1,5 @@
+# Keep LF everywhere so generated files and hashes compare equal on Windows too.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
