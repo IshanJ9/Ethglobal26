@@ -2,6 +2,7 @@ node_modules/
 .env
 .env.local
 apps/api/data/
+apps/ingest/data/
 *.log
 .DS_Store
 .next/
