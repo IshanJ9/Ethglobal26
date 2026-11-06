@@ -1,3 +1,4 @@
+import { objectAction } from "../world/verifier.ts";
 import type { ReplicaStore } from "../replica/replica.ts";
 import { keccakUtf8 } from "@proofwork/crypto";
 import { canonicalJson } from "@proofwork/crypto";
@@ -335,7 +336,7 @@ export class ClaimService {
       claim_id: id,
       auth_method: authMethod,
       token_sha256: sha256Hex(token),
-      world_action: authMethod === "world_id" ? COSIGN_WORLD_ACTION : null,
+      world_action: authMethod === "world_id" ? objectAction(COSIGN_WORLD_ACTION, id) : null,
       expires_at: iso(new Date(now.getTime() + ttlHours * 3600_000)),
       created_at: iso(now),
       closed_at: null,

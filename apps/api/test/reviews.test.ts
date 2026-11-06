@@ -139,8 +139,8 @@ describe("reviews (layer 3)", () => {
     // anchor needs a World step-up bound to the review hash; idempotent once anchored
     expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr })).statusCode).toBe(401);
     const w = (action: string) => ({ world_result: { adapter: "mock", payload: { action, signal: v.hashes.review_hash, nullifier: "0x" + Math.random().toString(16).slice(2).padEnd(64, "a") } } });
-    const a1 = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w("pw-anchor-review") })).json();
-    const a2 = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w("pw-anchor-review") })).json();
+    const a1 = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w(v.world_actions.anchor) })).json();
+    const a2 = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w(v.world_actions.anchor) })).json();
     expect(a1.anchor.anchored_by).toBe("p_hr");
     expect(a1.anchor.numeric_batch_id).toBeGreaterThanOrEqual(1_000_000_000);
     expect(a2.anchor.tx_hash).toBe(a1.anchor.tx_hash);
@@ -149,12 +149,12 @@ describe("reviews (layer 3)", () => {
     const ben = await login(app, "p_dev_b");
     expect((await app.inject({ method: "GET", url: `/v1/reviews/${v.review_id}`, headers: ben })).statusCode).toBe(200);
     // the employee acknowledges with World ID (bound to the review hash, wrong action rejected, once only)
-    expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: w("pw-anchor-review") })).statusCode).toBe(401);
-    const ackProof = w("pw-ack-review");
+    expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: w(v.world_actions.anchor) })).statusCode).toBe(401);
+    const ackProof = w(v.world_actions.acknowledge);
     const ack = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: ackProof })).json();
     expect(ack.acknowledgement.acknowledged_by).toBe("emp_dev_b");
     expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: ackProof })).statusCode).toBe(409);
-    expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: hr, payload: w("pw-ack-review") })).statusCode).toBe(403);
+    expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: hr, payload: w(v.world_actions.acknowledge) })).statusCode).toBe(403);
     expect(v.reasoning_agent.system_prompt_hash).toMatch(/^0x[0-9a-f]{64}$/);
     const chen = await login(app, "p_dev_c");
     expect((await app.inject({ method: "GET", url: `/v1/reviews/${v.review_id}`, headers: chen })).statusCode).toBe(404);
@@ -171,7 +171,7 @@ describe("reviews (layer 3)", () => {
       chain[m] = async (...args: unknown[]) => (await new Promise((r) => setTimeout(r, 25)), orig(...args));
     }
     // each click carries its own World step-up proof (bound to the review hash)
-    const w = (n: string) => ({ world_result: { adapter: "mock", payload: { action: "pw-anchor-review", signal: v.hashes.review_hash, nullifier: "0x" + n.repeat(64) } } });
+    const w = (n: string) => ({ world_result: { adapter: "mock", payload: { action: v.world_actions.anchor, signal: v.hashes.review_hash, nullifier: "0x" + n.repeat(64) } } });
     const [a, b] = await Promise.all([
       app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w("a") }),
       app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w("b") }),

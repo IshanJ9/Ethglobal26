@@ -52,7 +52,7 @@ describe("scorecards + approvals", () => {
   it("n03: approve without world_result -> 401, approval stays pending", async () => {
     const { app, sc, approval, complete, mgr } = await setup();
     const a = (await approval((await sc()).scorecard_id)).json();
-    expect(a.world_action).toBe("pw-approve-scorecard");
+    expect(a.world_action).toBe(`pw-approve-scorecard-${a.scorecard_id}`); // one World action per scorecard (CR-006)
     const r = await complete(a.approval_id, { decision: "approve" });
     expect(r.statusCode).toBe(401);
     expect(r.json().error.code).toBe("world_verification_failed");

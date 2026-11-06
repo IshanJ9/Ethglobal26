@@ -8,7 +8,9 @@ import { signRequest } from "@worldcoin/idkit-core/signing";
  * bundled for the browser. It signs only Proofwork's two actions, for a short time. When the API starts serving
  * `world_rp_context` (CR-002), the web uses that instead and this route goes unused.
  */
-const ACTIONS = new Set(["pw-approve-scorecard", "pw-cosign-claim", "pw-anchor-review", "pw-ack-review"]);
+// One World action per decided object ("<base>-<object id>"): World ID 4.0 nullifiers are single-use per action.
+const ACTION_RE = /^(pw-approve-scorecard|pw-cosign-claim|pw-anchor-review|pw-ack-review)(-[A-Za-z0-9_]{3,64})?$/;
+const ACTIONS = { has: (a: string) => ACTION_RE.test(a) };
 const TTL_SECONDS = 300;
 
 export const dynamic = "force-dynamic";

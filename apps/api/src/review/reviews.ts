@@ -1,3 +1,4 @@
+import { objectAction } from "../world/verifier.ts";
 import type { EnsCredentials } from "../ens/credentials.ts";
 import type { AgentPassService } from "../agentpass/agentpass.ts";
 // CR-004: a three-layer review (layer 1 KRA score in the cluster, layer 2 context, layer 3 0G reasoning),
@@ -194,8 +195,9 @@ export class ReviewService {
         }
       : null;
 
+    const reviewId = newId("rev");
     const review: Review = {
-      review_id: newId("rev"),
+      review_id: reviewId,
       employee_id: employeeId,
       display_name: emp.display_name,
       cycle_id: cycleId,
@@ -214,7 +216,7 @@ export class ReviewService {
       anchor: null,
       acknowledgement: null,
       agent_pass: agentPass,
-      world_actions: { anchor: ANCHOR_WORLD_ACTION, acknowledge: ACK_WORLD_ACTION, signal: hashes.review_hash },
+      world_actions: { anchor: objectAction(ANCHOR_WORLD_ACTION, reviewId), acknowledge: objectAction(ACK_WORLD_ACTION, reviewId), signal: hashes.review_hash },
       reasoning_agent: {
         ens_name: this.config.ENS_PARENT_NAME ? `review-agent.${this.config.ENS_PARENT_NAME}` : null,
         system_prompt_hash: keccakUtf8(SYSTEM_PROMPT),
@@ -278,10 +280,11 @@ export class ReviewService {
     const review = this.hydrate(r);
     if (review.acknowledgement) throw errors.invalidState("Review already acknowledged");
     const at = iso(this.clock.now());
-    const { nullifier, wrh } = await this.worldCheck(viewer, ACK_WORLD_ACTION, review, worldResult, at);
+    const ackAction = review.world_actions?.acknowledge ?? ACK_WORLD_ACTION;
+    const { nullifier, wrh } = await this.worldCheck(viewer, ackAction, review, worldResult, at);
     const ack = { acknowledged_by: viewer.employee_id, acknowledged_at: at, world_result_hash: wrh, world_mode: this.world.mode };
     this.db.transaction(() => {
-      if (!consumeNullifier(this.db, nullifier, `${ACK_WORLD_ACTION}:${id}`, at)) throw new ApiError(401, "world_verification_failed", "World proof was already used (replay)");
+      if (!consumeNullifier(this.db, nullifier, `${ackAction}:${id}`, at)) throw new ApiError(401, "world_verification_failed", "World proof was already used (replay)");
       this.db.prepare("UPDATE reviews SET ack_json = ? WHERE review_id = ?").run(JSON.stringify(ack), id);
       this.audit.append(at, viewer.persona_id, "review.acknowledged", id, { review_hash: review.hashes.review_hash, world_result_hash: wrh });
     })();
@@ -335,8 +338,9 @@ export class ReviewService {
     if (review.anchor) return review;
     // World ID step-up: a real, unique human signs off before the review hash goes on chain.
     const stepAt = iso(this.clock.now());
-    const { nullifier, wrh } = await this.worldCheck(viewer, ANCHOR_WORLD_ACTION, review, worldResult, stepAt);
-    if (!consumeNullifier(this.db, nullifier, `${ANCHOR_WORLD_ACTION}:${id}`, stepAt)) {
+    const anchorAction = review.world_actions?.anchor ?? ANCHOR_WORLD_ACTION;
+    const { nullifier, wrh } = await this.worldCheck(viewer, anchorAction, review, worldResult, stepAt);
+    if (!consumeNullifier(this.db, nullifier, `${anchorAction}:${id}`, stepAt)) {
       throw new ApiError(401, "world_verification_failed", "World proof was already used (replay)");
     }
     const used = (this.db.prepare("SELECT COUNT(*) FROM reviews WHERE anchor_json IS NOT NULL").pluck().get() as number) ?? 0;

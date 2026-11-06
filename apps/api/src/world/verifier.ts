@@ -120,3 +120,10 @@ export function worldResultHash(result: WorldResult): Hex {
     return keccakUtf8(JSON.stringify(result));
   }
 }
+
+/**
+ * World ID 4.0: nullifier = H(rpId || action || identity) and World keeps a nullifier pool, so one person can prove an
+ * action exactly once. Every decision is therefore its own action: "<base>-<object id>" (e.g. one per scorecard), so a
+ * manager can approve many scorecards, and each proof is still single-use for its object.
+ */
+export const objectAction = (base: string, objectId: string) => `${base}-${objectId}`;

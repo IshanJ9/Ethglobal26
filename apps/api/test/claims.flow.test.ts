@@ -131,7 +131,7 @@ describe("claims F1", () => {
     expect(claim.state).toBe("pending_cosign");
     expect(claim.kra_id).toBe("client_engagement");
     const view = (await app.inject({ method: "GET", url: "/v1/cosign/view", headers: tok })).json();
-    expect(view.world_action).toBe("pw-cosign-claim");
+    expect(view.world_action).toBe(`pw-cosign-claim-${view.claim_id}`); // one World action per claim (CR-006)
     expect(view.ai_flags).toContain("prompt_injection_suspected"); // CR-001
     const cs = await signTyped(CFO, pkg.typed_data);
 

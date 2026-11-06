@@ -1,3 +1,4 @@
+import { objectAction } from "../world/verifier.ts";
 // Scorecards (AGENT_A 3.3) and approvals (3.4). Versioned, never overwritten; a revision is a new version
 // that supersedes the old one. Approvals bind a World step-up to a server challenge.
 import { buildMerkle, canonicalJson, keccakUtf8, randomSalt, scoreCommitment, subjectId, type Hex } from "@proofwork/crypto";
@@ -233,7 +234,7 @@ export class ScorecardService {
       status: "pending",
       challenge: keccakUtf8(canonicalJson({ scorecard_id: sc.scorecard_id, score_commitment: sc.score_commitment, nonce })),
       nonce,
-      world_action: APPROVAL_WORLD_ACTION,
+      world_action: objectAction(APPROVAL_WORLD_ACTION, sc.scorecard_id),
       approver_employee_id: null,
       comment: null,
       proof_hash: null,
