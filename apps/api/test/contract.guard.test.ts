@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadContract } from "../src/contract/openapi.ts";
-import { testApp } from "./helpers.ts";
+import { expectNoViolations, login, testApp } from "./helpers.ts";
 
 describe("meta routes", () => {
   it("GET /healthz returns spec_version and the X-Spec-Version header", async () => {
@@ -43,7 +43,8 @@ describe("contract guard", () => {
   // Stand-in handler on a real spec route, so the guard's validators are exercised before the
   // real implementation lands. `mode` lets a test force a non-conforming response.
   async function appWithLogin(mode: "good" | "bad") {
-    const app = await testApp();
+    // AUTH_MODE=sso leaves /v1/dev/login unregistered, so a stand-in handler can occupy the spec route.
+    const app = await testApp({ AUTH_MODE: "sso" });
     app.post("/v1/dev/login", async () =>
       mode === "good"
         ? {
@@ -110,14 +111,24 @@ describe("contract guard", () => {
     expect(app.contractGuard.violations).toHaveLength(1);
   });
 
-  it("rejects unknown query parameters", async () => {
+  it("rejects unknown query parameters and coerces known ones", async () => {
     const app = await testApp();
-    app.get("/v1/audit", async () => ({ items: [] }));
-    const res = await app.inject({ method: "GET", url: "/v1/audit?limit=5&evil=1" });
+    const h = await login(app, "p_hr");
+    const res = await app.inject({ method: "GET", url: "/v1/audit?limit=5&evil=1", headers: h });
     expect(res.statusCode).toBe(400);
     expect(res.json().error.code).toBe("unknown_field");
-    const ok = await app.inject({ method: "GET", url: "/v1/audit?limit=5" });
+    const bad = await app.inject({ method: "GET", url: "/v1/audit?limit=500", headers: h });
+    expect(bad.json().error.code).toBe("validation_failed");
+    const ok = await app.inject({ method: "GET", url: "/v1/audit?limit=5", headers: h });
     expect(ok.statusCode).toBe(200);
+    expectNoViolations(app);
+  });
+
+  it("authentication runs before validation (401, not 400)", async () => {
+    const app = await testApp();
+    const res = await app.inject({ method: "POST", url: "/v1/claims", payload: { junk: 1 } });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error.code).toBe("unauthorized");
   });
 
   it("refuses to register a route that is not in the spec", async () => {

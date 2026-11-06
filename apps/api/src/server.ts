@@ -7,6 +7,15 @@ import { SPEC_VERSION, type Config } from "./config.ts";
 import { ApiError, errors } from "./errors.ts";
 import { registerContractGuard } from "./contract/guard.ts";
 import { metaRoutes } from "./routes/meta.ts";
+import { coreRoutes } from "./routes/core.ts";
+import { claimRoutes } from "./routes/claims.ts";
+import { buildServices, type ServiceOverrides, type Services } from "./services.ts";
+
+declare module "fastify" {
+  interface FastifyInstance {
+    svc: Services;
+  }
+}
 
 export const BODY_LIMIT = 100 * 1024;
 
@@ -18,7 +27,7 @@ const REDACT = [
   "req.headers.cookie",
 ];
 
-export async function buildApp(config: Config, opts: { logger?: boolean } = {}): Promise<FastifyInstance> {
+export async function buildApp(config: Config, opts: { logger?: boolean; services?: ServiceOverrides } = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: opts.logger === false ? false : { level: config.LOG_LEVEL, redact: { paths: REDACT, censor: "[redacted]" } },
     bodyLimit: BODY_LIMIT,
@@ -78,6 +87,14 @@ export async function buildApp(config: Config, opts: { logger?: boolean } = {}):
     return reply.code(500).send(errors.internal().toBody());
   });
 
+  const svc = buildServices(config, opts.services, (m, d) => app.log.warn(d ?? {}, m));
+  app.decorate("svc", svc);
+  app.addHook("onClose", async () => {
+    if (!opts.services?.db) svc.db.close();
+  });
+
   await app.register(metaRoutes, { config });
+  await app.register(coreRoutes, { svc });
+  await app.register(claimRoutes, { svc });
   return app;
 }

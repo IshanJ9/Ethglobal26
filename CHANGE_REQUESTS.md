@@ -28,3 +28,14 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 ## Log
 
 (empty - first entry is CR-001)
+
+### CR-001  Optional `ai_flags` on CosignView
+- Proposer: A        Date/time (IST): Fri 6 Nov 2026
+- Kind: additive
+- Problem: AGENT_A 3.9 / INTEGRATION F1.8 say the co-signer sees the claim's AI flags (e.g. `prompt_injection_suspected`, demo c2), but `CosignView` is `additionalProperties: false` without an `ai_flags` field, so the API cannot return them to the co-signer.
+- Proposal: `spec/openapi.yaml` `CosignView.properties.ai_flags`: same schema as `Claim.ai_flags` (array of enum `prompt_injection_suspected | low_confidence | fields_inferred`), optional.
+- Impact on the other agent: none required; B may render the flags on `/cosign` once merged.
+- Workaround until merged: flags are on `Claim` (visible to the employee and their manager); the co-signer page cannot show them yet.
+- Status: proposed
+- Other agent reply:
+- Merged in:
