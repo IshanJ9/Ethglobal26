@@ -4,7 +4,7 @@ import type { components } from "@proofwork/shared";
 import { canView, isHr, isInternal, me, makeAuthenticate, viewableEmployee, visibleEmployeeIds } from "../auth/auth.ts";
 import { errors } from "../errors.ts";
 import { toEvidenceItem, type EvidenceIngest } from "../ledger/ledger.ts";
-import { seedScenario } from "../fixtures.ts";
+import { seedClusters, seedScenario } from "../fixtures.ts";
 import { expandEvent } from "../dev/expand.ts";
 import { iso, safeEqual } from "../util.ts";
 import type { Services } from "../services.ts";
@@ -102,7 +102,7 @@ export async function coreRoutes(app: FastifyInstance, { svc }: { svc: Services 
       const p = me(req);
       if (!isInternal(p)) throw errors.forbidden();
       const { step_id } = req.body as { step_id: string };
-      const step = (seedScenario().steps as any[]).find((s) => s.step_id === step_id);
+      const step = ([...seedScenario().steps, ...seedClusters().steps] as any[]).find((s) => s.step_id === step_id);
       if (!step) throw errors.notFound(`Unknown step_id ${step_id}`);
       const ids: string[] = [];
       for (const ev of step.events) {

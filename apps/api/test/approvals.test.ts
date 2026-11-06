@@ -132,7 +132,7 @@ describe("scorecards + approvals", () => {
     expect(disp.json().status).toBe("disputed");
     expect((await app.inject({ method: "POST", url: `/v1/payouts/${w.scorecard_id}/resolve`, headers: mgr, payload: { release_funds: false } })).statusCode).toBe(403);
     const res = (await app.inject({ method: "POST", url: `/v1/payouts/${w.scorecard_id}/resolve`, headers: hr, payload: { release_funds: false } })).json();
-    expect(res).toMatchObject({ status: "closed", held: "0", forfeited: "892700000" });
+    expect(res).toMatchObject({ status: "closed", held: "0", forfeited: "600000000" }); // CR-004: Ben is on the IC plan (3,000 USDC target, 20% held)
     // The employee can read their own payout but not trigger a release.
     expect((await app.inject({ method: "GET", url: `/v1/payouts/${v.scorecard_id}`, headers: asha })).statusCode).toBe(200);
     expect((await app.inject({ method: "POST", url: `/v1/payouts/${v.scorecard_id}/release`, headers: asha })).statusCode).toBe(403);

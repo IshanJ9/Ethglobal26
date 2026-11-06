@@ -4,7 +4,7 @@ import { seedScenario } from "../src/fixtures.ts";
 import { CONNECTOR, expectNoViolations, login, testApp } from "./helpers.ts";
 
 const S = seedScenario();
-const PLAN: Record<string, string> = { emp_dev_a: "pln_eng_v1", emp_dev_b: "pln_eng_v1", emp_dev_c: "pln_eng_v1", emp_mkt_exec: "pln_mkt_v1", emp_ae: "pln_sales_v1" };
+const PLAN: Record<string, string> = { emp_dev_a: "pln_eng_v1", emp_dev_b: "pln_eng_ic_v1", emp_dev_c: "pln_eng_ic_v1", emp_mkt_exec: "pln_mkt_v1", emp_ae: "pln_sales_v1" };
 
 function summarize(r: any) {
   const o: any = { score_bps: r.score_bps, multiplier_bps: r.multiplier_bps, bonus_amount: r.bonus_amount, verified_ratio_bps: r.verified_ratio_bps, gate_passed: r.gate_passed };

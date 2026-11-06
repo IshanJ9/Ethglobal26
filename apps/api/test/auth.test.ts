@@ -24,8 +24,11 @@ describe("auth + ABAC", () => {
     const ids = async (p: string) =>
       (await app.inject({ method: "GET", url: "/v1/org/employees", headers: await login(app, p) })).json().items.map((e: any) => e.employee_id).sort();
     expect(await ids("p_dev_a")).toEqual(["emp_dev_a"]);
-    expect(await ids("p_eng_mgr")).toEqual(["emp_dev_a", "emp_dev_b", "emp_dev_c", "emp_eng_mgr"]);
-    expect(await ids("p_hr")).toHaveLength(8);
+    // CR-004: Elena also manages the software cluster peers (IC + Senior)
+    expect(await ids("p_eng_mgr")).toEqual(
+      ["emp_dev_a", "emp_dev_b", "emp_dev_c", "emp_eng_mgr", "emp_ic_dev", "emp_ic_leo", "emp_ic_maya", "emp_ic_nora", "emp_sr_omar", "emp_sr_sara", "emp_sr_tom", "emp_sr_yuki"].sort(),
+    );
+    expect(await ids("p_hr")).toHaveLength(29);
     expect(await ids("p_client_cfo")).toEqual([]);
     expectNoViolations(app);
   });
@@ -51,7 +54,7 @@ describe("auth + ABAC", () => {
   it("plans, cycles, public config", async () => {
     const app = await testApp();
     const h = await login(app, "p_dev_a");
-    expect((await app.inject({ method: "GET", url: "/v1/org/plans", headers: h })).json().items).toHaveLength(3);
+    expect((await app.inject({ method: "GET", url: "/v1/org/plans", headers: h })).json().items).toHaveLength(5); // CR-004: + pln_eng_ic_v1, pln_product_v1
     expect((await app.inject({ method: "GET", url: "/v1/org/plans/pln_eng_v1", headers: h })).json().formula_hash).toMatch(/^0x/);
     expect((await app.inject({ method: "GET", url: "/v1/org/plans/nope", headers: h })).statusCode).toBe(404);
     expect((await app.inject({ method: "GET", url: "/v1/cycles", headers: h })).json().items.map((c: any) => c.numeric_id)).toEqual([1, 2]);

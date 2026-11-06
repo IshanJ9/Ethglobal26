@@ -75,7 +75,7 @@ describe("replica store", () => {
   });
 
   it("a failing replica never blocks ingest", async () => {
-    const failing: ReplicaStore = { mode: "live", put: async () => Promise.reject(new Error("0G down")), forget: async () => {} };
+    const failing: ReplicaStore = { mode: "live", put: async () => Promise.reject(new Error("0G down")), get: async () => Promise.reject(new Error("0G down")), forget: async () => {} };
     const app = await testApp({}, { replica: failing });
     const r = await app.inject({ method: "POST", url: "/v1/evidence/ingest", headers: CONNECTOR, payload: ev("gh:r#2") });
     expect(r.statusCode).toBe(201);

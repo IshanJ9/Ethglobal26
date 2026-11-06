@@ -57,7 +57,7 @@ export async function runDemoStory(c: Client, opts: StoryOptions = {}) {
   const compute = async (emp: string, plan: string, cyc: string) =>
     expectOk(await c.call("POST", "/v1/scores/compute", { plan_id: plan, employee_id: emp, cycle_id: cyc }, hr), 200, `compute ${emp}`);
   const s1 = S.steps.find((s: any) => s.step_id === "s1_collect_baseline").expect;
-  for (const [emp, plan] of [["emp_dev_a", "pln_eng_v1"], ["emp_dev_b", "pln_eng_v1"], ["emp_dev_c", "pln_eng_v1"], ["emp_ae", "pln_sales_v1"]] as const) {
+  for (const [emp, plan] of [["emp_dev_a", "pln_eng_v1"], ["emp_dev_b", "pln_eng_ic_v1"], ["emp_dev_c", "pln_eng_ic_v1"], ["emp_ae", "pln_sales_v1"]] as const) {
     const x = await compute(emp, plan, C1);
     eq([x.score_bps, x.multiplier_bps, x.bonus_amount], [s1[`${emp}@${C1}`].score_bps, s1[`${emp}@${C1}`].multiplier_bps, s1[`${emp}@${C1}`].bonus_amount], `s1 ${emp}`);
   }

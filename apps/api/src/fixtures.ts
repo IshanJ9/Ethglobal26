@@ -17,3 +17,14 @@ export function specJson(rel: string): Json {
 
 export const seedOrg = () => specJson("fixtures/seed-org.json");
 export const seedScenario = () => specJson("fixtures/seed-scenario.json");
+/** CR-004: peer clusters (department.level -> plan) and the s5 cluster-population step. */
+export const clustersFixture = () => specJson("fixtures/clusters.json") as { clusters: ClusterFixture[] };
+export const seedClusters = () => specJson("fixtures/seed-clusters.json");
+export interface ClusterFixture {
+  cluster_id: string;
+  label: string;
+  department: string;
+  level: string;
+  plan_id: string;
+  description?: string;
+}

@@ -28,6 +28,11 @@ import { defaultReplicaDir, makeReplicaStore, ReplicaService, type ReplicaStore 
 import { API_DIR } from "./config.ts";
 import { EnsDirectory } from "./ens/directory.ts";
 import { EnsResolver, type EnsLookup } from "./ens/resolver.ts";
+import { ClusterService } from "./review/clusters.ts";
+import { ContextService } from "./review/context.ts";
+import { VaultReader } from "./review/vault.ts";
+import { ZeroGReasoner, type Reasoner } from "./review/reasoning.ts";
+import { ReviewService } from "./review/reviews.ts";
 
 export interface ServiceOverrides {
   clock?: Clock;
@@ -39,6 +44,8 @@ export interface ServiceOverrides {
   replica?: ReplicaStore;
   /** ENS reads; null disables. Default: a public-RPC resolver when ENS_NETWORK != none. */
   ens?: EnsLookup | null;
+  /** CR-004 review reasoning; null = deterministic (mock) writer. Default: 0G Private Computer when ZEROG_MODE=live. */
+  reasoner?: Reasoner | null;
 }
 
 export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m: string, d?: Record<string, unknown>) => void = () => {}) {
@@ -53,7 +60,8 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   const envelope = new Envelope(config.DATA_KEY);
   const ledger = new Ledger(db, evidence, org, audit, envelope, clock);
   const compute = new ComputeService(org, evidence, scorecards);
-  const replica = new ReplicaService(o.replica ?? makeReplicaStore(config, defaultReplicaDir(API_DIR), log), evidence, log);
+  const replicaStore = o.replica ?? makeReplicaStore(config, defaultReplicaDir(API_DIR), log);
+  const replica = new ReplicaService(replicaStore, evidence, log);
   ledger.onIngested = (id) => replica.enqueue(id);
   ledger.onShredded = (root) => void replica.forget(root);
 
@@ -81,9 +89,19 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   ens.start(o.ens !== undefined ? o.ens : config.ENS_NETWORK === "none" ? null : new EnsResolver(config));
   const verify = new VerifyService(evidence, ledger, chains, chain, scorecards, claimsRepo, org);
 
+  // CR-004: clusters, context, 0G-vault-backed review reasoning
+  const clusters = new ClusterService(org, compute, evidence, clock);
+  const contextSvc = new ContextService(org, evidence, envelope);
+  const vault = new VaultReader(evidence, envelope, replicaStore, { timeoutMs: 30_000, concurrency: 4, log });
+  let reasoner: Reasoner | null = o.reasoner !== undefined ? o.reasoner : null;
+  if (o.reasoner === undefined && config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL) {
+    reasoner = new ZeroGReasoner(config.ZEROG_BASE_URL, config.ZEROG_API_KEY, config.ZEROG_MODEL, clock);
+  }
+  const reviews = new ReviewService(db, org, evidence, clusters, contextSvc, vault, reasoner, chain, audit, config, clock, log);
+
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,
-    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens,
+    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews,
   };
 }
 export type Services = ReturnType<typeof buildServices>;

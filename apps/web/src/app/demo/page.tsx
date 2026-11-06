@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import scenario from "../../../../../spec/fixtures/seed-scenario.json";
+import clusterSeed from "../../../../../spec/fixtures/seed-clusters.json";
 import { api, unwrap, type Persona } from "@/lib/api";
 import { idem, useAction } from "@/lib/action";
 import { usePublicConfig } from "@/lib/config";
@@ -15,7 +16,8 @@ type Step = { step_id: string; description?: string };
 type Scripted = { id: string; employee: string; kra_id: string; cosign_auth: string; raw_text: string; expect: Record<string, unknown> };
 type Negative = { id: string; do: string; expect: Record<string, unknown> };
 
-const STEPS = scenario.steps as Step[];
+// s5 (CR-004) populates the peer clusters: peers, past review periods, deadline records.
+const STEPS = [...(scenario.steps as Step[]), ...(clusterSeed.steps as Step[])];
 const CLAIMS = scenario.scripted_claims as Scripted[];
 const NEGATIVE = scenario.negative_tests as Negative[];
 const QUICK = ["p_dev_a", "p_dev_b", "p_dev_c", "p_eng_mgr", "p_hr", "p_client_cfo"];

@@ -133,7 +133,7 @@
       "display_name": "Ben Carter",
       "department": "software",
       "level": "ic",
-      "plan_id": "pln_eng_v1",
+      "plan_id": "pln_eng_ic_v1",
       "wallet_address": "0xDD9BF67e531Cc092D3695381B060B93cae557035",
       "ens_name": null,
       "manager_employee_id": "emp_eng_mgr"
@@ -143,7 +143,7 @@
       "display_name": "Chen Wei",
       "department": "software",
       "level": "ic",
-      "plan_id": "pln_eng_v1",
+      "plan_id": "pln_eng_ic_v1",
       "wallet_address": "0xC14372935dD977Eace9b673c4d21Fb466f9Cc025",
       "ens_name": null,
       "manager_employee_id": "emp_eng_mgr"
@@ -197,6 +197,216 @@
       "wallet_address": "0x75C989274262d545B872F298B1173951A97af8fD",
       "ens_name": null,
       "manager_employee_id": null
+    },
+    {
+      "employee_id": "emp_ic_dev",
+      "display_name": "Dev Patel",
+      "department": "software",
+      "level": "ic",
+      "plan_id": "pln_eng_ic_v1",
+      "wallet_address": "0x1b3f6dd776fac02d1bcb952c3590a2ecf5217fb4",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_ic_maya",
+      "display_name": "Maya Singh",
+      "department": "software",
+      "level": "ic",
+      "plan_id": "pln_eng_ic_v1",
+      "wallet_address": "0x1d5be0d40ced746f86c294956adcc2a4fc18fefe",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_ic_leo",
+      "display_name": "Leo Fischer",
+      "department": "software",
+      "level": "ic",
+      "plan_id": "pln_eng_ic_v1",
+      "wallet_address": "0xa904dac274296e5d1ea3069c37104991ffdb0b32",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_ic_nora",
+      "display_name": "Nora Kim",
+      "department": "software",
+      "level": "ic",
+      "plan_id": "pln_eng_ic_v1",
+      "wallet_address": "0x22a70c9e21c02eee82fd0396ed736cc680bea7a1",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_sr_omar",
+      "display_name": "Omar Haddad",
+      "department": "software",
+      "level": "senior_ic",
+      "plan_id": "pln_eng_v1",
+      "wallet_address": "0xc51d8a8f4b36f55043c28a9ace42f6eb6dd2a2ef",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_sr_sara",
+      "display_name": "Sara Lopez",
+      "department": "software",
+      "level": "senior_ic",
+      "plan_id": "pln_eng_v1",
+      "wallet_address": "0x1c280794a25f319ad7dfc2c1afc70b18361ffd5d",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_sr_tom",
+      "display_name": "Tom Becker",
+      "department": "software",
+      "level": "senior_ic",
+      "plan_id": "pln_eng_v1",
+      "wallet_address": "0x05067f5be17e1445e182e3d11abe7ba88646c8bd",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_sr_yuki",
+      "display_name": "Yuki Sato",
+      "department": "software",
+      "level": "senior_ic",
+      "plan_id": "pln_eng_v1",
+      "wallet_address": "0x311271bd307afeadfbf42667eaae4d16a55ba5d9",
+      "ens_name": null,
+      "manager_employee_id": "emp_eng_mgr"
+    },
+    {
+      "employee_id": "emp_ae_lena",
+      "display_name": "Lena Novak",
+      "department": "sales",
+      "level": "ic",
+      "plan_id": "pln_sales_v1",
+      "wallet_address": "0x11e4b5789e942af4009307e6e705ac7041defe9f",
+      "ens_name": null,
+      "manager_employee_id": "emp_sales_mgr"
+    },
+    {
+      "employee_id": "emp_ae_raj",
+      "display_name": "Raj Iyer",
+      "department": "sales",
+      "level": "ic",
+      "plan_id": "pln_sales_v1",
+      "wallet_address": "0x9aa2caa070e52ebdce1fc3027b8c68ea6eed3066",
+      "ens_name": null,
+      "manager_employee_id": "emp_sales_mgr"
+    },
+    {
+      "employee_id": "emp_ae_mia",
+      "display_name": "Mia Rossi",
+      "department": "sales",
+      "level": "ic",
+      "plan_id": "pln_sales_v1",
+      "wallet_address": "0x1b2a7a4caae1c3a11f6e3e8f51ad7c954baa7193",
+      "ens_name": null,
+      "manager_employee_id": "emp_sales_mgr"
+    },
+    {
+      "employee_id": "emp_ae_sam",
+      "display_name": "Sam Okafor",
+      "department": "sales",
+      "level": "ic",
+      "plan_id": "pln_sales_v1",
+      "wallet_address": "0xb4666842895640c9ab6b0831a59ac593f64ff3cc",
+      "ens_name": null,
+      "manager_employee_id": "emp_sales_mgr"
+    },
+    {
+      "employee_id": "emp_mkt_zoe",
+      "display_name": "Zoe Martin",
+      "department": "marketing",
+      "level": "ic",
+      "plan_id": "pln_mkt_v1",
+      "wallet_address": "0xe4284fc1085d70be7812619a5f3893277cf6d2db",
+      "ens_name": null,
+      "manager_employee_id": "emp_mkt_mgr"
+    },
+    {
+      "employee_id": "emp_mkt_ali",
+      "display_name": "Ali Hassan",
+      "department": "marketing",
+      "level": "ic",
+      "plan_id": "pln_mkt_v1",
+      "wallet_address": "0x57b5d7d7a58c6c3a334995c4b616ba745e7dfab1",
+      "ens_name": null,
+      "manager_employee_id": "emp_mkt_mgr"
+    },
+    {
+      "employee_id": "emp_mkt_eva",
+      "display_name": "Eva Berg",
+      "department": "marketing",
+      "level": "ic",
+      "plan_id": "pln_mkt_v1",
+      "wallet_address": "0x1fefe74111dd12808f65222c4da3800911250737",
+      "ens_name": null,
+      "manager_employee_id": "emp_mkt_mgr"
+    },
+    {
+      "employee_id": "emp_mkt_kai",
+      "display_name": "Kai Wong",
+      "department": "marketing",
+      "level": "ic",
+      "plan_id": "pln_mkt_v1",
+      "wallet_address": "0xdbdd8b73116ac453ca80fb4dd5c16ab011158923",
+      "ens_name": null,
+      "manager_employee_id": "emp_mkt_mgr"
+    },
+    {
+      "employee_id": "emp_pm_priya",
+      "display_name": "Priya Nair",
+      "department": "product",
+      "level": "ic",
+      "plan_id": "pln_product_v1",
+      "wallet_address": "0x3f0a728f3be62de603efa66150637db892123251",
+      "ens_name": null,
+      "manager_employee_id": null
+    },
+    {
+      "employee_id": "emp_pm_marco",
+      "display_name": "Marco Silva",
+      "department": "product",
+      "level": "ic",
+      "plan_id": "pln_product_v1",
+      "wallet_address": "0xe4a4a5b2a372605aefef0bb9367e81767a4addcd",
+      "ens_name": null,
+      "manager_employee_id": null
+    },
+    {
+      "employee_id": "emp_pm_hana",
+      "display_name": "Hana Ito",
+      "department": "product",
+      "level": "ic",
+      "plan_id": "pln_product_v1",
+      "wallet_address": "0xab613373230cd1624edd00ac9c65ba5a8ac48639",
+      "ens_name": null,
+      "manager_employee_id": null
+    },
+    {
+      "employee_id": "emp_pm_ivan",
+      "display_name": "Ivan Petrov",
+      "department": "product",
+      "level": "ic",
+      "plan_id": "pln_product_v1",
+      "wallet_address": "0x9383a3a5cd77160f5ba4e2ecf7b47c1da355da77",
+      "ens_name": null,
+      "manager_employee_id": null
+    },
+    {
+      "employee_id": "emp_pm_lucy",
+      "display_name": "Lucy Grant",
+      "department": "product",
+      "level": "ic",
+      "plan_id": "pln_product_v1",
+      "wallet_address": "0x7ddc539c2ff9d74570cabd1e1174e01b3b133456",
+      "ens_name": null,
+      "manager_employee_id": null
     }
   ],
   "cycles": [
@@ -219,8 +429,10 @@
   ],
   "plan_ids": [
     "pln_eng_v1",
+    "pln_eng_ic_v1",
     "pln_mkt_v1",
-    "pln_sales_v1"
+    "pln_sales_v1",
+    "pln_product_v1"
   ],
   "connector_keys": {
     "demo": "demo-connector-key-change-me"

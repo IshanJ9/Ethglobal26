@@ -32,7 +32,15 @@ function Row({ emp, cards, cycleId }: { emp: Schemas["Employee"]; cards: Schemas
     <tr className="border-b border-line/60 align-middle">
       <td className="py-2.5 pr-3">
         <PersonName name={emp.display_name} address={emp.wallet_address} ens={emp.ens_name} />
-        <div className="text-xs text-muted">{emp.level.replace(/_/g, " ")}</div>
+        <div className="text-xs text-muted">
+          {emp.level.replace(/_/g, " ")}
+          {emp.cluster_id ? (
+            <>
+              {" · "}
+              <Link href={`/clusters?c=${emp.cluster_id}`} className="text-code underline decoration-code/30">cluster {emp.cluster_id}</Link>
+            </>
+          ) : null}
+        </div>
       </td>
       <td className="py-2.5 pr-3 text-right tabular-nums">{latest ? formatBps(latest.result.score_bps) : "-"}</td>
       <td className="py-2.5 pr-3 text-right tabular-nums">{latest ? formatBps(latest.result.multiplier_bps) : "-"}</td>

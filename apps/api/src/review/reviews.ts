@@ -1,0 +1,286 @@
+// CR-004: a three-layer review (layer 1 KRA score in the cluster, layer 2 context, layer 3 0G reasoning),
+// stored with every hash needed to prove what it was built from, and anchorable on chain.
+import { canonicalJson, keccakUtf8, type Hex } from "@proofwork/crypto";
+import type { components } from "@proofwork/shared";
+import { ApiError, errors } from "../errors.ts";
+import { canView, isHr, isInternal } from "../auth/auth.ts";
+import type { AuditRepo } from "../db/audit.ts";
+import type { EvidenceRepo } from "../db/evidence.ts";
+import { clusterIdOf, type Employee, type OrgRepo, type Persona } from "../db/org.ts";
+import type { DB } from "../db/index.ts";
+import type { ChainClient } from "../chain/types.ts";
+import type { Config } from "../config.ts";
+import { loadContract } from "../contract/openapi.ts";
+import { iso, newId, type Clock } from "../util.ts";
+import { kraValues, type ClusterService } from "./clusters.ts";
+import { HISTORY_KIND, type ContextService } from "./context.ts";
+import { allowedNumbers, buildPacket, checkNumbers, parseReasoning, reasoningHash, SYSTEM_PROMPT, templateReasoning, type Reasoner, type Reasoning } from "./reasoning.ts";
+import { percentileBps, rankDesc, zMilli, distStats } from "./stats.ts";
+import type { VaultReader } from "./vault.ts";
+
+export type Review = components["schemas"]["Review"];
+export type ReviewSummary = components["schemas"]["ReviewSummary"];
+
+const REVIEW_BATCH_BASE = 1_000_000_000; // review anchors never collide with evidence batch ids
+
+export class ReviewService {
+  constructor(
+    private readonly db: DB,
+    private readonly org: OrgRepo,
+    private readonly evidence: EvidenceRepo,
+    private readonly clusters: ClusterService,
+    private readonly context: ContextService,
+    private readonly vault: VaultReader,
+    private readonly reasoner: Reasoner | null,
+    private readonly chain: ChainClient,
+    private readonly audit: AuditRepo,
+    private readonly config: Config,
+    private readonly clock: Clock,
+    private readonly log: (m: string, d?: Record<string, unknown>) => void = () => {},
+  ) {}
+
+  private canCreate(viewer: Persona, e: Employee) {
+    return isHr(viewer) || (viewer.role === "manager" && e.manager_employee_id === viewer.employee_id);
+  }
+
+  async create(viewer: Persona, employeeId: string, cycleId: string, peerId: string | null | undefined): Promise<Review> {
+    const emp = this.org.employee(employeeId);
+    if (!emp || !canView(viewer, emp)) throw errors.notFound("Employee not found");
+    if (!this.canCreate(viewer, emp)) throw errors.forbidden("Only HR or the employee's manager can prepare a review");
+    const cycle = this.org.cycle(cycleId);
+    if (!cycle) throw errors.notFound("Cycle not found");
+    const clusterId = clusterIdOf(emp);
+    if (!clusterId) throw new ApiError(409, "cluster_mismatch", `${emp.display_name} is not in a peer cluster`);
+    let peer: Employee | null = null;
+    if (peerId) {
+      peer = this.org.employee(peerId) ?? null;
+      if (!peer || !canView(viewer, peer)) throw errors.notFound("Peer not found");
+      if (peer.employee_id === emp.employee_id) throw errors.validation("Pick a different peer");
+      if (clusterIdOf(peer) !== clusterId) {
+        throw new ApiError(409, "cluster_mismatch", `${peer.display_name} is in ${clusterIdOf(peer) ?? "no cluster"}, not ${clusterId}; people are only compared inside their own cluster`, {
+          employee_cluster: clusterId,
+          peer_cluster: clusterIdOf(peer),
+        });
+      }
+    }
+
+    // Layer 1 (whole cluster, same plan) and layer 2.
+    const comp = this.clusters.computeAll(clusterId, cycleId);
+    const result = comp.results.get(employeeId)!;
+    const scores = comp.scores;
+    const ctx = this.context.report(employeeId, cycleId, comp);
+    const { _notes, ...contextReport } = ctx;
+
+    // Vault: every evidence item of the subject (and peer) is read back and its commitment recomputed.
+    const rows = [employeeId, ...(peer ? [peer.employee_id] : [])].flatMap((id) => this.evidence.forEmployeeCycle(id, cycleId));
+    const { report: vault, payloads } = await this.vault.read(rows);
+
+    const kras = kraValues(comp.plan, result);
+    const packet = buildPacket({
+      name: emp.display_name,
+      comp,
+      result,
+      kras,
+      rank: rankDesc(scores, result.score_bps),
+      percentile_bps: percentileBps(scores, result.score_bps),
+      z_milli: zMilli(scores, result.score_bps),
+      context: contextReport,
+      notes: _notes,
+      peer: peer ? { name: peer.display_name, result: comp.results.get(peer.employee_id)!, kras: kraValues(comp.plan, comp.results.get(peer.employee_id)!) } : null,
+      evidence: rows.filter((r) => r.employee_id === employeeId),
+      payloads,
+      cycleLabel: cycle.label,
+    });
+    const packetJson = canonicalJson(packet);
+    const packet_hash = keccakUtf8(packetJson);
+    const allowed = allowedNumbers(packet);
+
+    // KRA -> evidence ids, history ids (citations for the deterministic writer)
+    const kraEvidence = new Map<string, string[]>();
+    for (const l of result.lines) {
+      const k = comp.plan.kras.find((x) => x.kra_id === l.kra_id);
+      if (k) kraEvidence.set(k.label, l.evidence_ids?.length ? l.evidence_ids : ["layer1.kras"]);
+    }
+    const historyIds = rows.filter((r) => r.employee_id === employeeId && r.kind === HISTORY_KIND).map((r) => r.evidence_id);
+    const pctl = percentileBps(scores, result.score_bps);
+
+    // Layer 3: 0G Private Computer, number-checked; deterministic writer as mock / fallback.
+    let reasoning: Reasoning;
+    let source: Review["reasoning_source"];
+    let inference: Review["inference"] = null;
+    let provider: string | null = null;
+    let fallback_reason: string | null = null;
+    let number_check: Review["number_check"];
+    if (this.reasoner) {
+      const validate = loadContract().schema("Reasoning");
+      const user = `PACKET:\n${packetJson}`;
+      let attempt = 0;
+      let lastErr = "";
+      let got: Reasoning | null = null;
+      let check: Review["number_check"] | null = null;
+      while (attempt < 2 && !got) {
+        attempt++;
+        try {
+          const prompt = attempt === 1 ? user : `${user}\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${lastErr}. Answer again following every rule; copy numbers exactly from the packet.`;
+          const out = await this.reasoner.complete(SYSTEM_PROMPT, prompt);
+          inference = out.record;
+          provider = out.provider;
+          const parsed = parseReasoning(out.output, validate);
+          if (!parsed.ok) {
+            lastErr = parsed.error;
+            continue;
+          }
+          check = checkNumbers(parsed.value, allowed, attempt);
+          if (!check.passed) {
+            lastErr = `these numbers are not in the packet: ${check.unsupported.slice(0, 12).join(", ")}`;
+            continue;
+          }
+          got = parsed.value;
+        } catch (e) {
+          lastErr = `0G call failed: ${(e as Error).message.slice(0, 160)}`;
+          this.log("0G reasoning call failed", { error: lastErr });
+        }
+      }
+      if (got && check) {
+        reasoning = got;
+        source = "0g_private_computer";
+        number_check = check;
+      } else {
+        reasoning = templateReasoning(packet, pctl, kraEvidence, historyIds);
+        source = "deterministic_fallback";
+        fallback_reason = lastErr || "0G reasoning unavailable";
+        number_check = { ...checkNumbers(reasoning, allowed, attempt), attempts: attempt };
+      }
+    } else {
+      reasoning = templateReasoning(packet, pctl, kraEvidence, historyIds);
+      source = "mock";
+      number_check = checkNumbers(reasoning, allowed, 0);
+    }
+
+    const output_hash = reasoningHash(reasoning);
+    const hashes = {
+      packet_hash,
+      context_hash: contextReport.context_hash,
+      inputs_hash: result.inputs_hash,
+      output_hash,
+      review_hash: keccakUtf8(canonicalJson({ schema: "pw.review.v1", packet_hash, context_hash: contextReport.context_hash, inputs_hash: result.inputs_hash, output_hash })) as Hex,
+    };
+    const peerCmp = peer
+      ? {
+          peer_employee_id: peer.employee_id,
+          peer_display_name: peer.display_name,
+          score_bps_self: result.score_bps,
+          score_bps_peer: comp.results.get(peer.employee_id)!.score_bps,
+          kras: kras.map((k) => {
+            const p = kraValues(comp.plan, comp.results.get(peer!.employee_id)!).find((x) => x.kra_id === k.kra_id)!;
+            const col = comp.members.map((m) => kraValues(comp.plan, comp.results.get(m.employee_id)!).find((x) => x.kra_id === k.kra_id)!.actual);
+            return { kra_id: k.kra_id, label: k.label, self: k.actual, peer: p.actual, ratio_milli: p.actual === 0 ? null : Math.round((k.actual / p.actual) * 1000), cluster_median: distStats(col).median };
+          }),
+        }
+      : null;
+
+    const review: Review = {
+      review_id: newId("rev"),
+      employee_id: employeeId,
+      display_name: emp.display_name,
+      cycle_id: cycleId,
+      cluster: comp.cluster,
+      layer1: { result, rank: rankDesc(scores, result.score_bps), n: scores.length, percentile_bps: pctl, z_milli: zMilli(scores, result.score_bps), score_stats: distStats(scores) },
+      context: contextReport,
+      peer: peerCmp,
+      vault,
+      reasoning,
+      reasoning_source: source,
+      inference,
+      inference_provider: provider,
+      fallback_reason,
+      number_check,
+      hashes,
+      anchor: null,
+      created_by: viewer.persona_id,
+      created_at: iso(this.clock.now()),
+    };
+    this.db
+      .prepare(
+        `INSERT INTO reviews (review_id, employee_id, cycle_id, cluster_id, peer_employee_id, review_json, review_hash, reasoning_source, anchor_json, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+      )
+      .run(review.review_id, employeeId, cycleId, clusterId, peer?.employee_id ?? null, JSON.stringify(review), hashes.review_hash, source, viewer.persona_id, review.created_at);
+    this.audit.append(review.created_at, viewer.persona_id, "review.created", review.review_id, {
+      employee_id: employeeId,
+      cluster_id: clusterId,
+      peer_employee_id: peer?.employee_id ?? null,
+      reasoning_source: source,
+      review_hash: hashes.review_hash,
+      vault_items: vault.items_total,
+      commitments_matched: vault.commitments_matched,
+    });
+    return review;
+  }
+
+  private row(id: string): { review_json: string; anchor_json: string | null; employee_id: string } | undefined {
+    return this.db.prepare("SELECT review_json, anchor_json, employee_id FROM reviews WHERE review_id = ?").get(id) as any;
+  }
+
+  private hydrate(r: { review_json: string; anchor_json: string | null }): Review {
+    const v = JSON.parse(r.review_json) as Review;
+    return { ...v, anchor: r.anchor_json ? JSON.parse(r.anchor_json) : null };
+  }
+
+  get(viewer: Persona, id: string): Review {
+    const r = this.row(id);
+    if (!r || !isInternal(viewer) || !canView(viewer, this.org.employee(r.employee_id))) throw errors.notFound("Review not found");
+    return this.hydrate(r);
+  }
+
+  list(viewer: Persona, f: { employeeId?: string; cycleId?: string }): ReviewSummary[] {
+    if (!isInternal(viewer)) throw errors.forbidden("Not available to external co-signers");
+    const rows = this.db
+      .prepare(`SELECT review_json, anchor_json, employee_id FROM reviews WHERE (? IS NULL OR employee_id = ?) AND (? IS NULL OR cycle_id = ?) ORDER BY created_at DESC LIMIT 200`)
+      .all(f.employeeId ?? null, f.employeeId ?? null, f.cycleId ?? null, f.cycleId ?? null) as Array<{ review_json: string; anchor_json: string | null; employee_id: string }>;
+    return rows
+      .filter((r) => canView(viewer, this.org.employee(r.employee_id)))
+      .map((r) => {
+        const v = this.hydrate(r);
+        return {
+          review_id: v.review_id,
+          employee_id: v.employee_id,
+          display_name: v.display_name,
+          cycle_id: v.cycle_id,
+          cluster_id: v.cluster.cluster_id,
+          peer_employee_id: v.peer?.peer_employee_id ?? null,
+          headline: v.reasoning.headline,
+          score_bps: v.layer1.result.score_bps,
+          reasoning_source: v.reasoning_source,
+          review_hash: v.hashes.review_hash,
+          anchor_tx_hash: v.anchor?.tx_hash ?? null,
+          created_at: v.created_at,
+        };
+      });
+  }
+
+  /** HR anchors the review hash with anchorBatch(review_hash, id >= 1e9, 1). Idempotent. */
+  async anchor(viewer: Persona, id: string): Promise<Review> {
+    if (!isHr(viewer)) throw errors.forbidden("Only HR can anchor a review");
+    const r = this.row(id);
+    if (!r) throw errors.notFound("Review not found");
+    const review = this.hydrate(r);
+    if (review.anchor) return review;
+    const used = (this.db.prepare("SELECT COUNT(*) FROM reviews WHERE anchor_json IS NOT NULL").pluck().get() as number) ?? 0;
+    let numeric = REVIEW_BATCH_BASE + used + 1;
+    const zero = "0x" + "00".repeat(32);
+    while ((await this.chain.batchRoot(BigInt(numeric))) !== zero) numeric++;
+    const { txHash } = await this.chain.anchorBatch(review.hashes.review_hash as Hex, BigInt(numeric), 1);
+    const base = this.config.EXPLORER_BASE_URL?.replace(/\/$/, "");
+    const anchor = {
+      numeric_batch_id: numeric,
+      tx_hash: txHash,
+      chain_mode: this.chain.mode,
+      explorer_url: this.chain.mode === "live" && base ? `${base}/tx/${txHash}` : null,
+      anchored_at: iso(this.clock.now()),
+    };
+    this.db.prepare("UPDATE reviews SET anchor_json = ? WHERE review_id = ?").run(JSON.stringify(anchor), id);
+    this.audit.append(anchor.anchored_at, viewer.persona_id, "review.anchored", id, { review_hash: review.hashes.review_hash, numeric_batch_id: numeric, tx_hash: txHash, chain_mode: this.chain.mode });
+    return { ...review, anchor };
+  }
+}

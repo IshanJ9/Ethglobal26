@@ -274,17 +274,17 @@
           "bug_credit_total_milli": 40000
         },
         "emp_dev_b@cyc_2026h2": {
-          "score_bps": 8571,
-          "multiplier_bps": 8927,
-          "bonus_amount": "4463500000",
+          "score_bps": 9483,
+          "multiplier_bps": 10000,
+          "bonus_amount": "3000000000",
           "verified_ratio_bps": 10000,
           "gate_passed": true,
           "bug_credit_total_milli": 10000
         },
         "emp_dev_c@cyc_2026h2": {
-          "score_bps": 7362,
-          "multiplier_bps": 5905,
-          "bonus_amount": "2952500000",
+          "score_bps": 8845,
+          "multiplier_bps": 9612,
+          "bonus_amount": "2883600000",
           "verified_ratio_bps": 10000,
           "gate_passed": true,
           "bug_credit_total_milli": 0

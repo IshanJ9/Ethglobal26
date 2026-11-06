@@ -40,7 +40,7 @@ const ajv = new Ajv2020({ strict: false, allErrors: true }); addFormats(ajv);
 ajv.addSchema({ $id: "pw", components: api.components });
 const S = (name) => { const v = ajv.getSchema(`pw#/components/schemas/${name}`); assert.ok(v, "schema " + name); return v; };
 const check = (name, data, label) => { const v = S(name); if (!v(data)) throw new Error(`${label} fails ${name}: ` + ajv.errorsText(v.errors)); };
-const plans = ["pln_eng_v1", "pln_mkt_v1", "pln_sales_v1"].map((id) => js(`spec/fixtures/plans/${id}.json`));
+const plans = js("spec/fixtures/seed-org.json").plan_ids.map((id) => js(`spec/fixtures/plans/${id}.json`));
 for (const p of plans) {
   check("Plan", p, p.plan_id);
   const { formula_hash, ...rest } = p; assert.equal(formulaHash(rest), formula_hash, `${p.plan_id} formula_hash stale - run pnpm gen:fixtures`);
@@ -58,6 +58,20 @@ for (const st of scen.steps) for (const e of st.events) {
   for (const ev of list) { const { claim_ref, ...rest } = ev; check("EvidenceIngest", rest, st.step_id + ":" + ev.ref); n++; }
 }
 ok(`seed-scenario: ${n} event templates valid EvidenceIngest; ${scen.negative_tests.length} negative tests, ${scen.scripted_claims.length} scripted claims`);
+// CR-004: clusters (one plan per department.level, >= 5 members each) and the s5 population step
+const clu = js("spec/fixtures/clusters.json").clusters;
+for (const c of clu) {
+  assert.ok(org.plan_ids.includes(c.plan_id), `cluster ${c.cluster_id} plan ${c.plan_id} missing`);
+  assert.equal(c.cluster_id, `${c.department}.${c.level}`, `cluster id must be department.level`);
+  const mem = org.employees.filter((e) => e.department === c.department && e.level === c.level);
+  assert.ok(mem.length >= 5, `cluster ${c.cluster_id} has ${mem.length} members (< 5)`);
+  for (const m of mem) assert.equal(m.plan_id, c.plan_id, `${m.employee_id} not on cluster plan ${c.plan_id}`);
+}
+let m5 = 0;
+for (const st of js("spec/fixtures/seed-clusters.json").steps) for (const e of st.events) {
+  for (const ev of expandEvent(e)) { const { claim_ref, ...rest } = ev; check("EvidenceIngest", rest, st.step_id + ":" + ev.ref); m5++; }
+}
+ok(`clusters: ${clu.length} valid (one plan each, >= 5 members); seed-clusters: ${m5} events valid EvidenceIngest`);
 
 // 4. reference engine + crypto vs vectors (two languages)
 execFileSync("node", [join(root, "spec/reference/verify-engine.mjs")], { stdio: "inherit" }); ok("JS reference engine == Python vectors");

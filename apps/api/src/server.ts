@@ -12,6 +12,7 @@ import { metaRoutes } from "./routes/meta.ts";
 import { coreRoutes } from "./routes/core.ts";
 import { claimRoutes } from "./routes/claims.ts";
 import { flowRoutes } from "./routes/flow.ts";
+import { reviewRoutes } from "./routes/review.ts";
 import { ChainRevert } from "./chain/types.ts";
 import { buildServices, type ServiceOverrides, type Services } from "./services.ts";
 
@@ -65,6 +66,7 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
     "POST /v1/cosign/sign": 30,
     "POST /v1/cosign/decline": 30,
     "POST /v1/verify": 120,
+    "POST /v1/reviews": 20, // 0G reasoning call
   };
   app.addHook("onRoute", (r) => {
     const m = Array.isArray(r.method) ? r.method[0] : r.method;
@@ -129,5 +131,6 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
   await app.register(coreRoutes, { svc });
   await app.register(claimRoutes, { svc });
   await app.register(flowRoutes, { svc });
+  await app.register(reviewRoutes, { svc });
   return app;
 }

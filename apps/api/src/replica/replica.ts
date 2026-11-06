@@ -1,7 +1,8 @@
 // ReplicaStore (AGENT_A section 4): the org DB is primary; an ENCRYPTED copy of each evidence payload
 // (already sealed under the record DEK) goes to 0G Storage, or to local disk in mock mode. A failed replica
 // never blocks the flow. Shredding destroys the key, so any remaining replica is undecryptable.
-import { mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { keccakBytes } from "@proofwork/crypto";
 import type { Config } from "../config.ts";
@@ -10,6 +11,8 @@ import type { EvidenceRepo } from "../db/evidence.ts";
 export interface ReplicaStore {
   readonly mode: "mock" | "live";
   put(bytes: Uint8Array): Promise<{ root: string }>;
+  /** CR-004: read a sealed payload back from the vault by its root (the review packet is built from these). */
+  get(root: string): Promise<Uint8Array>;
   /** Best effort: local copies can be deleted; 0G Storage is immutable (the key is what gets destroyed). */
   forget(root: string): Promise<void>;
 }
@@ -22,6 +25,10 @@ export class LocalReplicaStore implements ReplicaStore {
     mkdirSync(this.dir, { recursive: true });
     writeFileSync(join(this.dir, `${root}.bin`), bytes);
     return { root };
+  }
+  async get(root: string) {
+    if (!/^0x[0-9a-f]{64}$/.test(root)) throw new Error("bad replica root");
+    return new Uint8Array(readFileSync(join(this.dir, `${root}.bin`)));
   }
   async forget(root: string) {
     const f = join(this.dir, `${root}.bin`);
@@ -50,6 +57,19 @@ export class ZeroGReplicaStore implements ReplicaStore {
     const root = (tx && "rootHash" in tx ? tx.rootHash : tree?.rootHash()) as string;
     if (!root) throw new Error("0G upload returned no root hash");
     return { root };
+  }
+  async get(root: string) {
+    if (!/^0x[0-9a-fA-F]{64}$/.test(root)) throw new Error("bad replica root");
+    const sdk: any = await import("@0gfoundation/0g-storage-ts-sdk");
+    const indexer = new sdk.Indexer(this.indexerUrl);
+    const file = join(tmpdir(), `pw-0g-${root.slice(2, 18)}-${Date.now()}.bin`);
+    try {
+      const err = await indexer.download(root, file, true); // true = verify the Merkle proof of every segment
+      if (err) throw new Error(`0G download: ${err}`);
+      return new Uint8Array(readFileSync(file));
+    } finally {
+      if (existsSync(file)) rmSync(file);
+    }
   }
   async forget() {}
 }

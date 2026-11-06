@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
-import { formulaHash } from "../packages/crypto/src/index.ts";
+import { formulaHash, keccakUtf8 } from "../packages/crypto/src/index.ts";
 import { evaluateCommission, evaluatePlan, payoutSplit, revision } from "../spec/reference/engine.mjs";
 import { expandEvent } from "../spec/reference/expand.mjs";
 
@@ -57,7 +57,38 @@ const sales = finalize({
   gates: { min_verified_ratio_bps: 8000 },
   carry_forward: { history_weight_bps: 0, open_item_decay_bps: 0 },
 });
-const plans = { pln_eng_v1: engineer, pln_mkt_v1: marketing, pln_sales_v1: sales };
+// CR-004: KRAs differ per level too. pln_eng_v1 is the Software Senior IC plan; IC engineers get lower targets.
+const engineerIC = finalize({
+  plan_id: "pln_eng_ic_v1", name: "Software Engineer (IC) - H2 bonus", department: "software", kind: "target_attainment",
+  target_bonus: "3000000000", holdback_bps: 2000, maturity_days: 90, payout_curve: curve,
+  kras: [
+    kra("deliverables", "Planned deliverables shipped", 3000, "higher_better", 14, 1200000, "deliverables", "sum", "git", "space_activity"),
+    kra("code_reviews", "Code reviews completed", 1500, "higher_better", 30, 1100000, "code_reviews", "sum", "git", "space_collaboration"),
+    kra("service_cfr", "Change failure rate (bps, team context)", 2000, "lower_better", 1800, 1200000, "service_cfr_bps", "latest", "tickets", "dora_cfr_team_context"),
+    kra("incident_sla", "Incident SLA met (bps, team context)", 1500, "higher_better", 9000, 1200000, "incident_sla_bps", "latest", "tickets", "dora_mttr_team_context"),
+    kra("bug_impact", "Severity-weighted bug-fix credit (milli-points)", 1000, "higher_better", 30000, 1500000, "bug_credit_milli", "sum", "bug_credit", "cvss_severity_weighted_szz_filtered"),
+    kra("client_engagement", "Co-signed client engagements", 1000, "higher_better", 1, 1200000, "client_engagements", "sum", "cosign", "client_cosign"),
+  ],
+  bug_credit: V.bug_credit.policy,
+  gates: { min_verified_ratio_bps: 8000 },
+  carry_forward: { history_weight_bps: 2000, open_item_decay_bps: 5000 },
+});
+
+const product = finalize({
+  plan_id: "pln_product_v1", name: "Product Manager - H2 bonus", department: "product", kind: "target_attainment",
+  target_bonus: "4000000000", holdback_bps: 2000, maturity_days: 90, payout_curve: curve,
+  kras: [
+    kra("roadmap_delivered", "Roadmap items delivered", 3000, "higher_better", 8, 1200000, "roadmap_items", "sum", "tickets", "roadmap_commitments"),
+    kra("discovery", "Customer discovery interviews", 1500, "higher_better", 24, 1100000, "discovery_interviews", "sum", "crm", "continuous_discovery"),
+    kra("adoption", "Feature adoption (bps of active accounts)", 2500, "higher_better", 3500, 1300000, "feature_adoption_bps", "latest", "crm", "product_adoption"),
+    kra("spec_rework", "Spec rework rate (bps)", 1500, "lower_better", 1500, 1200000, "spec_rework_bps", "latest", "tickets", "spec_quality"),
+    kra("csat", "Customer satisfaction (CSAT, bps)", 1500, "higher_better", 8500, 1100000, "csat_bps", "latest", "crm", "csat_survey"),
+  ],
+  gates: { min_verified_ratio_bps: 8000 },
+  carry_forward: { history_weight_bps: 2000, open_item_decay_bps: 5000 },
+});
+
+const plans = { pln_eng_v1: engineer, pln_eng_ic_v1: engineerIC, pln_mkt_v1: marketing, pln_sales_v1: sales, pln_product_v1: product };
 for (const p of Object.values(plans)) out(`spec/fixtures/plans/${p.plan_id}.json`, p);
 
 // ------------------------------------------------------------------ org
@@ -75,12 +106,59 @@ const personas = [
   ["p_client_cfo", "ext_client_cfo", "Karan Shah (CFO, Acme Bank)", "external_cosigner", "external", null, false],
 ].map(([persona_id, employee_id, display_name, role, department, manager_employee_id, world_id_verified]) =>
   ({ persona_id, employee_id, display_name, role, department, wallet_address: A[persona_id], ens_name: null, manager_employee_id, world_id_verified }));
-const planOf = { emp_dev_a: "pln_eng_v1", emp_dev_b: "pln_eng_v1", emp_dev_c: "pln_eng_v1", emp_eng_mgr: "pln_eng_v1", emp_ae: "pln_sales_v1", emp_sales_mgr: "pln_sales_v1", emp_mkt_exec: "pln_mkt_v1", emp_mkt_mgr: "pln_mkt_v1" };
+const planOf = { emp_dev_a: "pln_eng_v1", emp_dev_b: "pln_eng_ic_v1", emp_dev_c: "pln_eng_ic_v1", emp_eng_mgr: "pln_eng_v1", emp_ae: "pln_sales_v1", emp_sales_mgr: "pln_sales_v1", emp_mkt_exec: "pln_mkt_v1", emp_mkt_mgr: "pln_mkt_v1" };
 const employees = personas.filter((p) => planOf[p.employee_id]).map((p) => ({
   employee_id: p.employee_id, display_name: p.display_name, department: p.department,
   level: p.role === "manager" ? "manager" : p.employee_id === "emp_dev_a" ? "senior_ic" : "ic",
   plan_id: planOf[p.employee_id], wallet_address: p.wallet_address, ens_name: null, manager_employee_id: p.manager_employee_id,
 }));
+
+// ------------------------------------------------------------------ CR-004 clusters, peers, history
+// Cluster = department.level; each has ONE plan. Peers never log in (no persona); their wallet is a
+// deterministic placeholder address (keccak of the id), never a key.
+const CLUSTERS = [
+  { cluster_id: "software.ic", label: "Software Engineer · IC", department: "software", level: "ic", plan_id: "pln_eng_ic_v1", description: "Individual-contributor engineers (0-3 yrs). Delivery and review targets sized for IC scope." },
+  { cluster_id: "software.senior_ic", label: "Software Engineer · Senior", department: "software", level: "senior_ic", plan_id: "pln_eng_v1", description: "Senior engineers. Higher delivery, review and incident expectations, more client exposure." },
+  { cluster_id: "sales.ic", label: "Account Executive", department: "sales", level: "ic", plan_id: "pln_sales_v1", description: "Quota-carrying AEs. Tiered commission on closed-won, retention-adjusted." },
+  { cluster_id: "marketing.ic", label: "Marketing Executive", department: "marketing", level: "ic", plan_id: "pln_mkt_v1", description: "Demand-gen executives. Pipeline, conversion, efficiency and campaign delivery." },
+  { cluster_id: "product.ic", label: "Product Manager", department: "product", level: "ic", plan_id: "pln_product_v1", description: "Product managers. Roadmap delivery, discovery, adoption, spec quality and CSAT." },
+];
+const peerAddr = (id) => "0x" + keccakUtf8(`proofwork-peer:${id}`).slice(-40);
+// [employee_id, name, cluster, manager, archetype]
+const PEERS = [
+  ["emp_ic_dev", "Dev Patel", "software.ic", "emp_eng_mgr", "star"],
+  ["emp_ic_maya", "Maya Singh", "software.ic", "emp_eng_mgr", "steady"],
+  ["emp_ic_leo", "Leo Fischer", "software.ic", "emp_eng_mgr", "slipping"],
+  ["emp_ic_nora", "Nora Kim", "software.ic", "emp_eng_mgr", "newcomer"],
+  ["emp_sr_omar", "Omar Haddad", "software.senior_ic", "emp_eng_mgr", "star"],
+  ["emp_sr_sara", "Sara Lopez", "software.senior_ic", "emp_eng_mgr", "steady"],
+  ["emp_sr_tom", "Tom Becker", "software.senior_ic", "emp_eng_mgr", "slipping"],
+  ["emp_sr_yuki", "Yuki Sato", "software.senior_ic", "emp_eng_mgr", "rising"],
+  ["emp_ae_lena", "Lena Novak", "sales.ic", "emp_sales_mgr", "star"],
+  ["emp_ae_raj", "Raj Iyer", "sales.ic", "emp_sales_mgr", "steady"],
+  ["emp_ae_mia", "Mia Rossi", "sales.ic", "emp_sales_mgr", "slipping"],
+  ["emp_ae_sam", "Sam Okafor", "sales.ic", "emp_sales_mgr", "rising"],
+  ["emp_mkt_zoe", "Zoe Martin", "marketing.ic", "emp_mkt_mgr", "star"],
+  ["emp_mkt_ali", "Ali Hassan", "marketing.ic", "emp_mkt_mgr", "steady"],
+  ["emp_mkt_eva", "Eva Berg", "marketing.ic", "emp_mkt_mgr", "slipping"],
+  ["emp_mkt_kai", "Kai Wong", "marketing.ic", "emp_mkt_mgr", "newcomer"],
+  ["emp_pm_priya", "Priya Nair", "product.ic", null, "star"],
+  ["emp_pm_marco", "Marco Silva", "product.ic", null, "steady"],
+  ["emp_pm_hana", "Hana Ito", "product.ic", null, "rising"],
+  ["emp_pm_ivan", "Ivan Petrov", "product.ic", null, "slipping"],
+  ["emp_pm_lucy", "Lucy Grant", "product.ic", null, "steady2"],
+];
+const clusterById = Object.fromEntries(CLUSTERS.map((c) => [c.cluster_id, c]));
+for (const [employee_id, display_name, cl, mgr] of PEERS) {
+  const c = clusterById[cl];
+  planOf[employee_id] = c.plan_id;
+  employees.push({ employee_id, display_name, department: c.department, level: c.level, plan_id: c.plan_id, wallet_address: peerAddr(employee_id), ens_name: null, manager_employee_id: mgr });
+}
+for (const c of CLUSTERS) {
+  const members = employees.filter((e) => e.department === c.department && e.level === c.level);
+  assert.ok(members.length >= 5, `cluster ${c.cluster_id} needs >= 5 members for statistics`);
+  for (const m of members) assert.equal(m.plan_id, c.plan_id, `${m.employee_id} must be on its cluster plan ${c.plan_id}`);
+}
 const cycles = [
   { cycle_id: "cyc_2026h2", numeric_id: 1, label: "FY26 H2", starts_on: "2026-07-01", ends_on: "2026-12-31", status: "open" },
   { cycle_id: "cyc_2027h1", numeric_id: 2, label: "FY27 H1", starts_on: "2027-01-01", ends_on: "2027-06-30", status: "open" },
@@ -249,6 +327,112 @@ out("spec/fixtures/seed-scenario.json", {
   _note: "GENERATED by scripts/gen-fixtures.mjs. Expected numbers are computed by spec/reference/engine.mjs and cross-checked against Python vectors. inputs_hash is not listed (it depends on server-generated evidence ids).",
   cycle_ids: { c1: C1, c2: C2 }, steps, scripted_claims, negative_tests,
 });
+// ------------------------------------------------------------------ CR-004 cluster population (step s5)
+// Everything below enters through the normal ledger (committed, hash-chained, encrypted, replicated to 0G).
+// History and deadline metric keys are NOT KRA metric keys, so they never change a score; they feed the
+// context layer and the 0G reasoning packet only.
+const PERIODS = [
+  { period_id: "fy25h1", period_label: "FY25 H1", at: "2025-06-30T12:00:00Z" },
+  { period_id: "fy25h2", period_label: "FY25 H2", at: "2025-12-31T12:00:00Z" },
+  { period_id: "fy26h1", period_label: "FY26 H1", at: "2026-06-30T12:00:00Z" },
+];
+const ARCH = {
+  star: { f: 1.15, hist: [8800, 9300, 9800], dl: [19, 20, 5], histDl: [[18, 20, 8], [19, 20, 6], [20, 21, 4]], bugs: ["P1", "P2", "P2"], client: 2, retention: 9600, note: "Consistently exceeds targets; others rely on their reviews." },
+  steady: { f: 1.0, hist: [9000, 9100, 9050], dl: [16, 18, 12], histDl: [[15, 17, 14], [16, 18, 12], [16, 18, 11]], bugs: ["P2", "P2"], client: 1, retention: 9200, note: "Reliable delivery at plan; few surprises." },
+  steady2: { f: 0.97, hist: [8900, 9000, 8950], dl: [15, 17, 15], histDl: [[14, 16, 16], [15, 17, 15], [15, 17, 14]], bugs: ["P2"], client: 1, retention: 9100, note: "Solid, slightly under plan on rework." },
+  rising: { f: 1.05, hist: [7600, 8300, 9000], dl: [15, 17, 10], histDl: [[11, 16, 38], [13, 17, 22], [15, 17, 12]], bugs: ["P1", "P2"], client: 2, retention: 9400, note: "Clear upward trajectory since joining the team." },
+  slipping: { f: 0.7, hist: [9400, 8600, 7800], dl: [9, 16, 65], histDl: [[17, 18, 9], [13, 17, 31], [10, 16, 52]], bugs: ["P3"], client: 0, retention: 8200, note: "Missed several committed dates; needs a recovery plan." },
+  newcomer: { f: 0.9, hist: [null, null, 8500], dl: [10, 12, 20], histDl: [null, null, [7, 9, 25]], bugs: ["P2"], client: 0, retention: 9000, note: "Joined last period; still ramping up." },
+};
+// Archetypes for the core demo people (their KRA evidence already comes from s1).
+const CORE_ARCH = {
+  emp_dev_a: { ...ARCH.star, hist: [9200, 9500, 9600], dl: [17, 18, 8], histDl: [[16, 17, 9], [17, 18, 7], [18, 19, 6]], note: "Senior anchor on payments; trusted with P0 incidents." },
+  emp_dev_b: { ...ARCH.steady, hist: [8700, 8900, 9100], dl: [18, 19, 6], histDl: [[15, 18, 15], [16, 18, 11], [17, 18, 8]], note: "High volume of small fixes; dependable on dates." },
+  emp_dev_c: { ...ARCH.slipping, hist: [9000, 8600, 8300], dl: [12, 16, 40], histDl: [[16, 18, 10], [14, 17, 24], [12, 16, 37]], note: "Quality issues on own changes; dates slipping." },
+  emp_ae: { ...ARCH.steady, note: "Lands mid-size deals reliably." },
+  emp_mkt_exec: { ...ARCH.rising, note: "Pipeline quality improving each half." },
+};
+const C1E = "cyc_2026h2";
+const kraCount = (p) => (p.kind === "tiered_commission" ? 2 : p.kras.length);
+const hitOf = (score, total) => Math.max(0, total - (score >= 9500 ? 0 : score >= 9000 ? 1 : score >= 8000 ? 2 : 3));
+const rating = (s) => (s >= 9500 ? "exceeds" : s >= 8800 ? "meets" : s >= 8000 ? "partially_meets" : "below");
+const scale = (target, f, dir) => Math.max(0, Math.round(dir === "lower_better" ? target / f : target * f));
+const clusterEvents = [];
+const members = employees.filter((e) => CLUSTERS.some((c) => c.department === e.department && c.level === e.level));
+for (const e of members) {
+  const isPeer = PEERS.some(([id]) => id === e.employee_id);
+  const archName = isPeer ? PEERS.find(([id]) => id === e.employee_id)[4] : null;
+  const a = isPeer ? ARCH[archName] : CORE_ARCH[e.employee_id];
+  assert.ok(a, `no archetype for ${e.employee_id}`);
+  const plan = plans[e.plan_id];
+  const id = e.employee_id;
+  // history: one HRIS performance review per past period
+  PERIODS.forEach((p, i) => {
+    const s = a.hist[i];
+    if (s === null) return;
+    const [onTime, total, slip] = a.histDl[i];
+    const tt = kraCount(plan);
+    clusterEvents.push(ev(id, C1E, "hris", "performance_review", `hris:review:${id}:${p.period_id}`, p.at, [
+      { metric_key: "hist_score_bps", value: s },
+      { metric_key: "hist_targets_hit", value: hitOf(s, tt) },
+      { metric_key: "hist_targets_total", value: tt },
+      { metric_key: "hist_deadlines_on_time", value: onTime },
+      { metric_key: "hist_deadlines_total", value: total },
+      { metric_key: "hist_slip_days_x10", value: slip },
+    ], { raw: { period_id: p.period_id, period_label: p.period_label, rating: rating(s), manager_note: a.note } }));
+  });
+  // current-cycle deadline record from the ticket system
+  clusterEvents.push(ev(id, C1E, "tickets", "delivery_timeliness", `jira:deadlines-h2-${id}`, "2026-12-15T09:00:00Z", [
+    { metric_key: "deadlines_on_time", value: a.dl[0] },
+    { metric_key: "deadlines_total", value: a.dl[1] },
+    { metric_key: "slip_days_x10", value: a.dl[2] },
+  ]));
+  if (!isPeer) continue; // core people already have their KRA evidence from s1
+  const t = Object.fromEntries((plan.kras ?? []).map((k) => [k.kra_id, k]));
+  const sv = (k, f = a.f) => scale(t[k].target, f, t[k].direction);
+  if (e.department === "software") {
+    clusterEvents.push(ev(id, C1E, "github", "sprint_delivery", `gh:acme/core#sprint-h2-${id}`, "2026-12-01T09:00:00Z", [{ metric_key: "deliverables", value: sv("deliverables") }, { metric_key: "code_reviews", value: sv("code_reviews") }]));
+    const slaF = 1 + (a.f - 1) * 0.3;
+    clusterEvents.push(ev(id, C1E, "tickets", "service_metrics", `ops:metrics-h2-${id}`, "2026-12-03T09:00:00Z", metrics(sv("service_cfr"), Math.min(10000, sv("incident_sla", slaF)))));
+    a.bugs.forEach((sev, i) => clusterEvents.push(ev(id, C1E, "tickets", "bug_fixed", `jira:${id}-fix-${i + 1}`, `2026-10-${String(10 + i).padStart(2, "0")}T12:00:00Z`, [], { severity: sev, share_bps: 10000, self_introduced: false })));
+    for (let i = 0; i < Math.min(a.client, e.level === "ic" ? 1 : 2); i++) {
+      clusterEvents.push(ev(id, C1E, "cosign", "client_cosign", `claim:${id}-${i + 1}`, `2026-11-${String(5 + i).padStart(2, "0")}T09:00:00Z`, [{ metric_key: "client_engagements", value: 1 }], { claim_ref: true }));
+    }
+  } else if (e.department === "marketing") {
+    clusterEvents.push(ev(id, C1E, "crm", "pipeline_summary", `crm:pipeline-h2-${id}`, "2026-12-05T09:00:00Z", [
+      { metric_key: "sourced_pipeline_usd", value: sv("sourced_pipeline") },
+      { metric_key: "mql_to_sql_bps", value: sv("mql_to_sql") },
+      { metric_key: "cost_per_sql_usd", value: sv("cost_per_sql") },
+    ]));
+    clusterEvents.push(ev(id, C1E, "hris", "campaign_milestone", `plan:campaigns-h2-${id}`, "2026-12-05T09:00:00Z", [{ metric_key: "campaign_milestones", value: sv("campaign_milestones") }]));
+  } else if (e.department === "sales") {
+    const total = Math.round(sales.commission.quota * a.f);
+    const parts = [0.45, 0.35, 0.2].map((x) => Math.round(total * x));
+    parts[2] = total - parts[0] - parts[1];
+    parts.forEach((v, i) => clusterEvents.push(ev(id, C1E, "crm", "deal_closed", `crm:${id}-deal-${i + 1}`, `2026-${String(9 + i).padStart(2, "0")}-20T09:00:00Z`, [{ metric_key: "closed_won_usd", value: v }])));
+    clusterEvents.push(ev(id, C1E, "crm", "retention_snapshot", `crm:retention-h2-${id}`, "2026-12-10T09:00:00Z", [{ metric_key: "retention_bps", value: a.retention }]));
+  } else if (e.department === "product") {
+    clusterEvents.push(ev(id, C1E, "tickets", "roadmap_delivered", `jira:roadmap-h2-${id}`, "2026-12-02T09:00:00Z", [{ metric_key: "roadmap_items", value: sv("roadmap_delivered") }]));
+    clusterEvents.push(ev(id, C1E, "crm", "discovery_log", `crm:discovery-h2-${id}`, "2026-12-04T09:00:00Z", [{ metric_key: "discovery_interviews", value: sv("discovery") }]));
+    clusterEvents.push(ev(id, C1E, "crm", "adoption_snapshot", `crm:adoption-h2-${id}`, "2026-12-08T09:00:00Z", [{ metric_key: "feature_adoption_bps", value: Math.min(10000, sv("adoption")) }]));
+    clusterEvents.push(ev(id, C1E, "tickets", "spec_quality", `jira:spec-rework-h2-${id}`, "2026-12-08T09:00:00Z", [{ metric_key: "spec_rework_bps", value: sv("spec_rework") }]));
+    clusterEvents.push(ev(id, C1E, "crm", "csat_survey", `crm:csat-h2-${id}`, "2026-12-09T09:00:00Z", [{ metric_key: "csat_bps", value: Math.min(10000, sv("csat", 1 + (a.f - 1) * 0.5)) }]));
+  }
+}
+out("spec/fixtures/clusters.json", {
+  _note: "GENERATED by scripts/gen-fixtures.mjs (CR-004). Peer cluster = department.level; each cluster has exactly one plan and members are only compared inside it.",
+  clusters: CLUSTERS,
+});
+out("spec/fixtures/seed-clusters.json", {
+  _note: "GENERATED by scripts/gen-fixtures.mjs (CR-004). Step s5 populates every cluster: current-cycle KRA evidence for peers, one HRIS performance review per past period, and the current deadline record from the ticket system. Run after s1.",
+  periods: PERIODS.map(({ period_id, period_label }) => ({ period_id, period_label })),
+  steps: [{
+    step_id: "s5_cluster_context",
+    description: "Populate the peer clusters (5 people each) with current-cycle evidence, three past review periods and deadline records, all through the normal ledger -> 0G vault.",
+    events: clusterEvents,
+  }],
+});
+console.log(`clusters: ${CLUSTERS.length}, cluster members: ${members.length}, s5 events: ${clusterEvents.length}`);
 console.log("fixtures written; plans:", Object.keys(plans).join(", "));
 console.log("formula hashes:", Object.values(plans).map((p) => `${p.plan_id}=${p.formula_hash.slice(0, 10)}`).join(" "));
 for (const [k, v] of Object.entries(expectations)) for (const [who, r] of Object.entries(v)) console.log(k, who, JSON.stringify({ s: r.score_bps, m: r.multiplier_bps, b: r.bonus_amount, vr: r.verified_ratio_bps, bc: r.bug_credit_total_milli }));

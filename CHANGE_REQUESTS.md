@@ -61,3 +61,18 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Status: merged
 - Other agent reply: ack (B, Fri 6 Nov 2026). Web reads `chain.amount_divisor` when present and shows "On-chain amounts scaled 1:N" (ChainScaleNote) in live mode; until merged it falls back to 1:10000 when chain_mode is live. Mock mode shows nothing.
 - Merged in: spec 1.2.0 (Fri 6 Nov 2026); A serves `chain.amount_divisor` when `CHAIN_AMOUNT_DIVISOR > 1`
+
+### CR-004  Peer clusters, context layer and 0G-backed review reasoning (mentor feedback)
+- Proposer: B        Date/time (IST): Fri 6 Nov 2026
+- Kind: additive (new endpoints, new fixtures, enum widening) + fixture change (Ben/Chen move to the IC plan)
+- Problem: mentor review. KRAs must differ per department AND per level, and people may only be compared inside their own cluster (e.g. Software IC vs Software IC, never vs Senior). A score alone does not survive a bonus review: HR needs (1) the KRA score, (2) context - how the person did before, deadlines hit or missed, targets over/under - and (3) a written reasoning HR can hand the employee that is provably built only from the committed, encrypted evidence (0G Storage) and produced inside 0G Private Computer, so an employee cannot say "you did not validate this".
+- Proposal:
+  - **Clusters** = `department.level` (`spec/fixtures/clusters.json`), each with its own plan. New plans `pln_eng_ic_v1` (Software IC) and `pln_product_v1` (Product); `pln_eng_v1` becomes the Software Senior IC plan. Ben and Chen move to `pln_eng_ic_v1`. `department` enum gains `product`. Each cluster gets peers (seed-org) so statistics are meaningful.
+  - **History + deadlines** enter as ordinary evidence through the ledger (so they are committed, hash-chained, envelope-encrypted and replicated to 0G): `hris/performance_review` (one per past period) and `tickets/delivery_timeliness` (current cycle). Metric keys are not KRA keys, so scores are unchanged. Dev step `s5_cluster_context` in `spec/fixtures/seed-clusters.json` loads them.
+  - **Endpoints:** `GET /v1/clusters`, `GET /v1/clusters/{cluster_id}/board` (layer 1 within the cluster: rank, percentile, z-score, per-KRA distribution), `GET /v1/employees/{employee_id}/context` (layer 2), `POST /v1/reviews` + `GET /v1/reviews` + `GET /v1/reviews/{review_id}` (layer 3), `POST /v1/reviews/{review_id}/anchor` (review hash anchored on Arc via `anchorBatch`, batch ids >= 1e9). Cross-cluster comparison -> 409 `cluster_mismatch`. `Employee.cluster_id` added (optional).
+  - **Reasoning rules:** the packet is assembled from vault payloads (0G replica -> decrypt -> recompute commitment == ledger commitment); every number in the model's text must exist in the packet or the output is rejected (one retry, then a labelled deterministic fallback). Review hash = keccak(canonicalJson({packet_hash, context_hash, inputs_hash, output_hash})).
+- Impact on the other agent: A's existing endpoints and numbers are unchanged except Ben/Chen scorecards now use the IC plan targets. B builds the endpoints (agreed with the user, 6 Nov) plus the web screens.
+- Workaround until merged: none needed; additive.
+- Status: proposed
+- Other agent reply:
+- Merged in:

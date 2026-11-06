@@ -9,6 +9,7 @@ export const DEPARTMENT_LABEL: Record<Persona["department"], string> = {
   software: "Software",
   sales: "Sales",
   marketing: "Marketing",
+  product: "Product",
   hr: "People team",
   external: "External",
 };

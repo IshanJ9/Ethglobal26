@@ -723,6 +723,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/clusters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Peer clusters (department x level). Each cluster has its own KRA plan; people are only ever compared inside their cluster. */
+        get: operations["listClusters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/clusters/{cluster_id}/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Layer 1 inside one cluster: every member's deterministic score, rank, percentile, z-score and per-KRA distribution. HR and managers of a member see names; an employee sees only their own row and anonymised peers. */
+        get: operations["getClusterBoard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/employees/{employee_id}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Layer 2: history (past review periods), deadline record, target hit rate, trend and position in the cluster. Computed by code from committed evidence; no AI. */
+        get: operations["getEmployeeContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listReviews"];
+        put?: never;
+        /** @description Layer 3: builds the review packet from the encrypted evidence vault (0G Storage replica -> decrypt -> commitment re-checked), asks 0G Private Computer for HR-ready reasoning, rejects any number that is not in the packet, and stores the hashes. Optional peer must be in the same cluster (409 cluster_mismatch). */
+        post: operations["createReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/{review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/{review_id}/anchor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description HR anchors the review hash on chain (registry anchorBatch, count 1, batch ids >= 1e9) so the reasoning shown in the bonus review is provably the one produced from the committed data. */
+        post: operations["anchorReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -739,7 +840,7 @@ export interface components {
         Error: {
             error: {
                 /** @enum {string} */
-                code: "bad_request" | "unknown_field" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "invalid_state" | "approval_required" | "approval_denied" | "grant_closed" | "signature_mismatch" | "world_verification_failed" | "validation_failed" | "gate_failed" | "chain_error" | "upstream_unavailable" | "rate_limited" | "internal";
+                code: "bad_request" | "unknown_field" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "invalid_state" | "approval_required" | "approval_denied" | "grant_closed" | "signature_mismatch" | "world_verification_failed" | "validation_failed" | "gate_failed" | "cluster_mismatch" | "chain_error" | "upstream_unavailable" | "rate_limited" | "internal";
                 message: string;
                 details?: {
                     [key: string]: unknown;
@@ -754,7 +855,7 @@ export interface components {
             display_name: string;
             role: components["schemas"]["Role"];
             /** @enum {string} */
-            department: "software" | "marketing" | "sales" | "hr" | "external";
+            department: "software" | "marketing" | "sales" | "product" | "hr" | "external";
             wallet_address: components["schemas"]["Address"];
             ens_name?: string | null;
             manager_employee_id?: string | null;
@@ -764,10 +865,12 @@ export interface components {
             employee_id: string;
             display_name: string;
             /** @enum {string} */
-            department: "software" | "marketing" | "sales";
+            department: "software" | "marketing" | "sales" | "product";
             /** @enum {string} */
             level: "ic" | "senior_ic" | "lead" | "manager";
             plan_id: string;
+            /** @description department.level peer cluster (CR-004) */
+            cluster_id?: string | null;
             wallet_address: components["schemas"]["Address"];
             ens_name?: string | null;
             manager_employee_id?: string | null;
@@ -836,7 +939,7 @@ export interface components {
             plan_id: string;
             name: string;
             /** @enum {string} */
-            department: "software" | "marketing" | "sales";
+            department: "software" | "marketing" | "sales" | "product";
             kind: components["schemas"]["ProgressionKind"];
             target_bonus: components["schemas"]["Amount"];
             holdback_bps: number;
@@ -1298,6 +1401,235 @@ export interface components {
                 ens_name: string;
                 address: components["schemas"]["Address"];
             };
+        };
+        Cluster: {
+            /** @description department.level, e.g. software.ic */
+            cluster_id: string;
+            label: string;
+            department: string;
+            level: string;
+            plan_id: string;
+            plan_name?: string;
+            member_count: number;
+            description?: string;
+        };
+        /** @description Integer statistics over the cluster (same unit as the measured value). */
+        DistStats: {
+            n: number;
+            mean: number;
+            median: number;
+            p25: number;
+            p75: number;
+            min: number;
+            max: number;
+            stdev: number;
+        };
+        ClusterMemberRow: {
+            /** @description null when anonymised for an employee viewer */
+            employee_id: string | null;
+            display_name: string;
+            is_self: boolean;
+            score_bps: number;
+            multiplier_bps: number;
+            bonus_amount: components["schemas"]["Amount"];
+            gate_passed: boolean;
+            rank: number;
+            percentile_bps: number;
+            /** @description z-score x 1000 within the cluster */
+            z_milli: number;
+            kras: {
+                kra_id: string;
+                actual: number;
+                attainment_ppm: number;
+                percentile_bps: number;
+            }[];
+            evidence_count: number;
+        };
+        ClusterBoard: {
+            cluster: components["schemas"]["Cluster"];
+            cycle_id: string;
+            plan_id: string;
+            formula_hash: components["schemas"]["Bytes32"];
+            score_stats: components["schemas"]["DistStats"];
+            kra_stats: {
+                kra_id: string;
+                label: string;
+                target: number;
+                direction: string;
+                actual: components["schemas"]["DistStats"];
+                attainment_ppm: components["schemas"]["DistStats"];
+            }[];
+            rows: components["schemas"]["ClusterMemberRow"][];
+            board_hash: components["schemas"]["Bytes32"];
+            generated_at: components["schemas"]["Timestamp"];
+        };
+        HistoryPeriod: {
+            period_id: string;
+            period_label: string;
+            score_bps: number;
+            targets_hit: number;
+            targets_total: number;
+            deadlines_on_time: number;
+            deadlines_total: number;
+            avg_slip_days_x10: number;
+            rating?: string | null;
+            evidence_id: string;
+        };
+        ContextSignal: {
+            /** @enum {string} */
+            code: "consistent_high_performer" | "improving" | "declining" | "volatile" | "deadline_reliable" | "deadline_risk" | "over_target" | "under_target" | "above_cluster" | "below_cluster" | "limited_history";
+            /** @enum {string} */
+            tone: "positive" | "neutral" | "negative";
+            text: string;
+        };
+        ContextReport: {
+            employee_id: string;
+            cycle_id: string;
+            cluster_id: string;
+            history: components["schemas"]["HistoryPeriod"][];
+            current: {
+                score_bps: number;
+                deadlines_on_time: number;
+                deadlines_total: number;
+                avg_slip_days_x10: number;
+                targets_hit: number;
+                targets_total: number;
+            };
+            /** @description least-squares slope over history + current */
+            trend_bps_per_period: number;
+            mean_bps: number;
+            volatility_bps: number;
+            target_hit_rate_bps: number;
+            on_time_rate_bps: number;
+            cluster_position: {
+                rank: number;
+                n: number;
+                percentile_bps: number;
+                z_milli: number;
+                median_bps: number;
+            };
+            signals: components["schemas"]["ContextSignal"][];
+            context_hash: components["schemas"]["Bytes32"];
+        };
+        VaultReport: {
+            items_total: number;
+            from_0g: number;
+            from_org_db: number;
+            commitments_matched: number;
+            commitments_failed: number;
+            /** @enum {string} */
+            store_mode: "live" | "mock";
+            items: {
+                evidence_id: string;
+                employee_id: string;
+                source: string;
+                kind: string;
+                /** @enum {string} */
+                read_from: "0g_storage" | "local_replica" | "org_db" | "shredded";
+                replica_root?: string | null;
+                /** @description null = commitment not recomputable here (claims commit to the excerpt; shredded items have no key) */
+                commitment_ok: boolean | null;
+            }[];
+        };
+        ReasoningCitation: {
+            statement: string;
+            /** @description evidence ids or packet paths (e.g. layer1.deliverables) */
+            refs: string[];
+        };
+        Reasoning: {
+            headline: string;
+            summary: string;
+            strengths: string[];
+            concerns: string[];
+            peer_comparison?: string | null;
+            recommendation: {
+                /** @enum {string} */
+                bonus_position: "above_cluster" | "at_cluster" | "below_cluster";
+                /** @enum {string} */
+                promotion_readiness: "ready" | "on_track" | "not_yet";
+                rationale: string;
+            };
+            talking_points: string[];
+            citations: components["schemas"]["ReasoningCitation"][];
+        };
+        NumberCheck: {
+            passed: boolean;
+            numbers_checked: number;
+            unsupported: string[];
+            attempts: number;
+        };
+        PeerComparison: {
+            peer_employee_id: string;
+            peer_display_name: string;
+            score_bps_self: number;
+            score_bps_peer: number;
+            kras: {
+                kra_id: string;
+                label: string;
+                self: number;
+                peer: number;
+                /** @description self/peer x 1000 (null when peer is 0) */
+                ratio_milli: number | null;
+                cluster_median: number;
+            }[];
+        };
+        ReviewSummary: {
+            review_id: string;
+            employee_id: string;
+            display_name?: string;
+            cycle_id: string;
+            cluster_id: string;
+            peer_employee_id?: string | null;
+            headline: string;
+            score_bps: number;
+            /** @enum {string} */
+            reasoning_source: "0g_private_computer" | "deterministic_fallback" | "mock";
+            review_hash: components["schemas"]["Bytes32"];
+            anchor_tx_hash?: string | null;
+            created_at: components["schemas"]["Timestamp"];
+        };
+        Review: {
+            review_id: string;
+            employee_id: string;
+            display_name: string;
+            cycle_id: string;
+            cluster: components["schemas"]["Cluster"];
+            layer1: {
+                result: components["schemas"]["ComputeResult"];
+                rank: number;
+                n: number;
+                percentile_bps: number;
+                z_milli: number;
+                score_stats: components["schemas"]["DistStats"];
+            };
+            context: components["schemas"]["ContextReport"];
+            peer: components["schemas"]["PeerComparison"] | null;
+            vault: components["schemas"]["VaultReport"];
+            reasoning: components["schemas"]["Reasoning"];
+            /** @enum {string} */
+            reasoning_source: "0g_private_computer" | "deterministic_fallback" | "mock";
+            inference: components["schemas"]["InferenceRecord"] | null;
+            /** @description 0G provider address from x_0g_trace (live) */
+            inference_provider?: string | null;
+            fallback_reason?: string | null;
+            number_check: components["schemas"]["NumberCheck"];
+            hashes: {
+                packet_hash: components["schemas"]["Bytes32"];
+                context_hash: components["schemas"]["Bytes32"];
+                inputs_hash: components["schemas"]["Bytes32"];
+                output_hash: components["schemas"]["Bytes32"];
+                review_hash: components["schemas"]["Bytes32"];
+            };
+            anchor: null | {
+                numeric_batch_id: number;
+                tx_hash: string;
+                /** @enum {string} */
+                chain_mode: "live" | "mock";
+                explorer_url?: string | null;
+                anchored_at: components["schemas"]["Timestamp"];
+            };
+            created_by: string;
+            created_at: components["schemas"]["Timestamp"];
         };
     };
     responses: {
@@ -2445,6 +2777,180 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    listClusters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Cluster"][];
+                    };
+                };
+            };
+        };
+    };
+    getClusterBoard: {
+        parameters: {
+            query: {
+                cycle_id: string;
+            };
+            header?: never;
+            path: {
+                cluster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClusterBoard"];
+                };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    getEmployeeContext: {
+        parameters: {
+            query: {
+                cycle_id: string;
+            };
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContextReport"];
+                };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    listReviews: {
+        parameters: {
+            query?: {
+                employee_id?: string;
+                cycle_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["ReviewSummary"][];
+                    };
+                };
+            };
+        };
+    };
+    createReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    employee_id: string;
+                    cycle_id: string;
+                    peer_employee_id?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"];
+                };
+            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"];
+                };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    anchorReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"];
+                };
+            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
 }

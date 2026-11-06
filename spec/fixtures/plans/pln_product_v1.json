@@ -1,0 +1,106 @@
+{
+  "plan_id": "pln_product_v1",
+  "name": "Product Manager - H2 bonus",
+  "department": "product",
+  "kind": "target_attainment",
+  "target_bonus": "4000000000",
+  "holdback_bps": 2000,
+  "maturity_days": 90,
+  "payout_curve": [
+    [
+      0,
+      0
+    ],
+    [
+      7000,
+      5000
+    ],
+    [
+      9000,
+      10000
+    ],
+    [
+      11000,
+      10000
+    ],
+    [
+      13000,
+      15000
+    ]
+  ],
+  "kras": [
+    {
+      "kra_id": "roadmap_delivered",
+      "label": "Roadmap items delivered",
+      "weight_bps": 3000,
+      "direction": "higher_better",
+      "target": 8,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "roadmap_items",
+      "agg": "sum",
+      "source": "tickets",
+      "basis": "roadmap_commitments"
+    },
+    {
+      "kra_id": "discovery",
+      "label": "Customer discovery interviews",
+      "weight_bps": 1500,
+      "direction": "higher_better",
+      "target": 24,
+      "floor_ppm": 0,
+      "cap_ppm": 1100000,
+      "metric_key": "discovery_interviews",
+      "agg": "sum",
+      "source": "crm",
+      "basis": "continuous_discovery"
+    },
+    {
+      "kra_id": "adoption",
+      "label": "Feature adoption (bps of active accounts)",
+      "weight_bps": 2500,
+      "direction": "higher_better",
+      "target": 3500,
+      "floor_ppm": 0,
+      "cap_ppm": 1300000,
+      "metric_key": "feature_adoption_bps",
+      "agg": "latest",
+      "source": "crm",
+      "basis": "product_adoption"
+    },
+    {
+      "kra_id": "spec_rework",
+      "label": "Spec rework rate (bps)",
+      "weight_bps": 1500,
+      "direction": "lower_better",
+      "target": 1500,
+      "floor_ppm": 0,
+      "cap_ppm": 1200000,
+      "metric_key": "spec_rework_bps",
+      "agg": "latest",
+      "source": "tickets",
+      "basis": "spec_quality"
+    },
+    {
+      "kra_id": "csat",
+      "label": "Customer satisfaction (CSAT, bps)",
+      "weight_bps": 1500,
+      "direction": "higher_better",
+      "target": 8500,
+      "floor_ppm": 0,
+      "cap_ppm": 1100000,
+      "metric_key": "csat_bps",
+      "agg": "latest",
+      "source": "crm",
+      "basis": "csat_survey"
+    }
+  ],
+  "gates": {
+    "min_verified_ratio_bps": 8000
+  },
+  "carry_forward": {
+    "history_weight_bps": 2000,
+    "open_item_decay_bps": 5000
+  },
+  "formula_hash": "0x6534add3a4ed245958205ece8c4224dd00062faf758ee4f0ddc32094bceb37cb"
+}

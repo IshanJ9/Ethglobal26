@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Proofwork API
-  version: 1.2.0
+  version: 1.3.0
   description: |
     FROZEN CONTRACT between Agent A (implements) and Agent B (consumes). Changes only via CHANGE_REQUESTS.md.
     Conventions (apply everywhere):
@@ -27,6 +27,7 @@ tags:
   - { name: chain }
   - { name: payouts }
   - { name: verify }
+  - { name: review }
   - { name: dev }
 security:
   - bearerAuth: []
@@ -596,6 +597,100 @@ paths:
                 properties:
                   items: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } }
                   next_cursor: { type: [string, "null"] }
+  /v1/clusters:
+    get:
+      tags: [review]
+      operationId: listClusters
+      description: "Peer clusters (department x level). Each cluster has its own KRA plan; people are only ever compared inside their cluster."
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Cluster" } }
+  /v1/clusters/{cluster_id}/board:
+    get:
+      tags: [review]
+      operationId: getClusterBoard
+      description: "Layer 1 inside one cluster: every member's deterministic score, rank, percentile, z-score and per-KRA distribution. HR and managers of a member see names; an employee sees only their own row and anonymised peers."
+      parameters:
+        - { name: cluster_id, in: path, required: true, schema: { type: string } }
+        - { name: cycle_id, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ClusterBoard" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/employees/{employee_id}/context:
+    get:
+      tags: [review]
+      operationId: getEmployeeContext
+      description: "Layer 2: history (past review periods), deadline record, target hit rate, trend and position in the cluster. Computed by code from committed evidence; no AI."
+      parameters:
+        - { name: employee_id, in: path, required: true, schema: { type: string } }
+        - { name: cycle_id, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ContextReport" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/reviews:
+    post:
+      tags: [review]
+      operationId: createReview
+      description: "Layer 3: builds the review packet from the encrypted evidence vault (0G Storage replica -> decrypt -> commitment re-checked), asks 0G Private Computer for HR-ready reasoning, rejects any number that is not in the packet, and stores the hashes. Optional peer must be in the same cluster (409 cluster_mismatch)."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [employee_id, cycle_id]
+              properties:
+                employee_id: { type: string }
+                cycle_id: { type: string }
+                peer_employee_id: { type: [string, "null"] }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Review" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+    get:
+      tags: [review]
+      operationId: listReviews
+      parameters:
+        - { name: employee_id, in: query, schema: { type: string } }
+        - { name: cycle_id, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/ReviewSummary" } }
+  /v1/reviews/{review_id}:
+    get:
+      tags: [review]
+      operationId: getReview
+      parameters: [{ name: review_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Review" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/reviews/{review_id}/anchor:
+    post:
+      tags: [review]
+      operationId: anchorReview
+      description: "HR anchors the review hash on chain (registry anchorBatch, count 1, batch ids >= 1e9) so the reasoning shown in the bonus review is provably the one produced from the committed data."
+      parameters: [{ name: review_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Review" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -649,6 +744,7 @@ components:
                 - world_verification_failed
                 - validation_failed
                 - gate_failed
+                - cluster_mismatch
                 - chain_error
                 - upstream_unavailable
                 - rate_limited
@@ -665,7 +761,7 @@ components:
         employee_id: { type: string }
         display_name: { type: string }
         role: { $ref: "#/components/schemas/Role" }
-        department: { type: string, enum: [software, marketing, sales, hr, external] }
+        department: { type: string, enum: [software, marketing, sales, product, hr, external] }
         wallet_address: { $ref: "#/components/schemas/Address" }
         ens_name: { type: [string, "null"] }
         manager_employee_id: { type: [string, "null"] }
@@ -677,9 +773,10 @@ components:
       properties:
         employee_id: { type: string }
         display_name: { type: string }
-        department: { type: string, enum: [software, marketing, sales] }
+        department: { type: string, enum: [software, marketing, sales, product] }
         level: { type: string, enum: [ic, senior_ic, lead, manager] }
         plan_id: { type: string }
+        cluster_id: { type: [string, "null"], description: "department.level peer cluster (CR-004)" }
         wallet_address: { $ref: "#/components/schemas/Address" }
         ens_name: { type: [string, "null"] }
         manager_employee_id: { type: [string, "null"] }
@@ -758,7 +855,7 @@ components:
       properties:
         plan_id: { type: string }
         name: { type: string }
-        department: { type: string, enum: [software, marketing, sales] }
+        department: { type: string, enum: [software, marketing, sales, product] }
         kind: { $ref: "#/components/schemas/ProgressionKind" }
         target_bonus: { $ref: "#/components/schemas/Amount" }
         holdback_bps: { type: integer, minimum: 0, maximum: 10000 }
@@ -1279,3 +1376,297 @@ components:
           properties:
             ens_name: { type: string }
             address: { $ref: "#/components/schemas/Address" }
+    Cluster:
+      type: object
+      additionalProperties: false
+      required: [cluster_id, label, department, level, plan_id, member_count]
+      properties:
+        cluster_id: { type: string, description: "department.level, e.g. software.ic" }
+        label: { type: string }
+        department: { type: string }
+        level: { type: string }
+        plan_id: { type: string }
+        plan_name: { type: string }
+        member_count: { type: integer, minimum: 0 }
+        description: { type: string }
+    DistStats:
+      type: object
+      additionalProperties: false
+      required: [n, mean, median, p25, p75, min, max, stdev]
+      description: "Integer statistics over the cluster (same unit as the measured value)."
+      properties:
+        n: { type: integer }
+        mean: { type: integer }
+        median: { type: integer }
+        p25: { type: integer }
+        p75: { type: integer }
+        min: { type: integer }
+        max: { type: integer }
+        stdev: { type: integer }
+    ClusterMemberRow:
+      type: object
+      additionalProperties: false
+      required: [employee_id, display_name, is_self, score_bps, multiplier_bps, bonus_amount, gate_passed, rank, percentile_bps, z_milli, kras, evidence_count]
+      properties:
+        employee_id: { type: [string, "null"], description: "null when anonymised for an employee viewer" }
+        display_name: { type: string }
+        is_self: { type: boolean }
+        score_bps: { type: integer }
+        multiplier_bps: { type: integer }
+        bonus_amount: { $ref: "#/components/schemas/Amount" }
+        gate_passed: { type: boolean }
+        rank: { type: integer, minimum: 1 }
+        percentile_bps: { type: integer, minimum: 0, maximum: 10000 }
+        z_milli: { type: integer, description: "z-score x 1000 within the cluster" }
+        kras:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [kra_id, actual, attainment_ppm, percentile_bps]
+            properties:
+              kra_id: { type: string }
+              actual: { type: integer }
+              attainment_ppm: { type: integer }
+              percentile_bps: { type: integer }
+        evidence_count: { type: integer }
+    ClusterBoard:
+      type: object
+      additionalProperties: false
+      required: [cluster, cycle_id, plan_id, formula_hash, score_stats, kra_stats, rows, board_hash, generated_at]
+      properties:
+        cluster: { $ref: "#/components/schemas/Cluster" }
+        cycle_id: { type: string }
+        plan_id: { type: string }
+        formula_hash: { $ref: "#/components/schemas/Bytes32" }
+        score_stats: { $ref: "#/components/schemas/DistStats" }
+        kra_stats:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [kra_id, label, target, direction, actual, attainment_ppm]
+            properties:
+              kra_id: { type: string }
+              label: { type: string }
+              target: { type: integer }
+              direction: { type: string }
+              actual: { $ref: "#/components/schemas/DistStats" }
+              attainment_ppm: { $ref: "#/components/schemas/DistStats" }
+        rows: { type: array, items: { $ref: "#/components/schemas/ClusterMemberRow" } }
+        board_hash: { $ref: "#/components/schemas/Bytes32" }
+        generated_at: { $ref: "#/components/schemas/Timestamp" }
+    HistoryPeriod:
+      type: object
+      additionalProperties: false
+      required: [period_id, period_label, score_bps, targets_hit, targets_total, deadlines_on_time, deadlines_total, avg_slip_days_x10, evidence_id]
+      properties:
+        period_id: { type: string }
+        period_label: { type: string }
+        score_bps: { type: integer }
+        targets_hit: { type: integer }
+        targets_total: { type: integer }
+        deadlines_on_time: { type: integer }
+        deadlines_total: { type: integer }
+        avg_slip_days_x10: { type: integer }
+        rating: { type: [string, "null"] }
+        evidence_id: { type: string }
+    ContextSignal:
+      type: object
+      additionalProperties: false
+      required: [code, tone, text]
+      properties:
+        code: { type: string, enum: [consistent_high_performer, improving, declining, volatile, deadline_reliable, deadline_risk, over_target, under_target, above_cluster, below_cluster, limited_history] }
+        tone: { type: string, enum: [positive, neutral, negative] }
+        text: { type: string }
+    ContextReport:
+      type: object
+      additionalProperties: false
+      required: [employee_id, cycle_id, cluster_id, history, current, trend_bps_per_period, mean_bps, volatility_bps, target_hit_rate_bps, on_time_rate_bps, cluster_position, signals, context_hash]
+      properties:
+        employee_id: { type: string }
+        cycle_id: { type: string }
+        cluster_id: { type: string }
+        history: { type: array, items: { $ref: "#/components/schemas/HistoryPeriod" } }
+        current:
+          type: object
+          additionalProperties: false
+          required: [score_bps, deadlines_on_time, deadlines_total, avg_slip_days_x10, targets_hit, targets_total]
+          properties:
+            score_bps: { type: integer }
+            deadlines_on_time: { type: integer }
+            deadlines_total: { type: integer }
+            avg_slip_days_x10: { type: integer }
+            targets_hit: { type: integer }
+            targets_total: { type: integer }
+        trend_bps_per_period: { type: integer, description: "least-squares slope over history + current" }
+        mean_bps: { type: integer }
+        volatility_bps: { type: integer }
+        target_hit_rate_bps: { type: integer }
+        on_time_rate_bps: { type: integer }
+        cluster_position:
+          type: object
+          additionalProperties: false
+          required: [rank, n, percentile_bps, z_milli, median_bps]
+          properties:
+            rank: { type: integer }
+            n: { type: integer }
+            percentile_bps: { type: integer }
+            z_milli: { type: integer }
+            median_bps: { type: integer }
+        signals: { type: array, items: { $ref: "#/components/schemas/ContextSignal" } }
+        context_hash: { $ref: "#/components/schemas/Bytes32" }
+    VaultReport:
+      type: object
+      additionalProperties: false
+      required: [items_total, from_0g, from_org_db, commitments_matched, commitments_failed, store_mode, items]
+      properties:
+        items_total: { type: integer }
+        from_0g: { type: integer }
+        from_org_db: { type: integer }
+        commitments_matched: { type: integer }
+        commitments_failed: { type: integer }
+        store_mode: { type: string, enum: [live, mock] }
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [evidence_id, employee_id, source, kind, read_from, commitment_ok]
+            properties:
+              evidence_id: { type: string }
+              employee_id: { type: string }
+              source: { type: string }
+              kind: { type: string }
+              read_from: { type: string, enum: [0g_storage, local_replica, org_db, shredded] }
+              replica_root: { type: [string, "null"] }
+              commitment_ok: { type: [boolean, "null"], description: "null = commitment not recomputable here (claims commit to the excerpt; shredded items have no key)" }
+    ReasoningCitation:
+      type: object
+      additionalProperties: false
+      required: [statement, refs]
+      properties:
+        statement: { type: string }
+        refs: { type: array, items: { type: string }, description: "evidence ids or packet paths (e.g. layer1.deliverables)" }
+    Reasoning:
+      type: object
+      additionalProperties: false
+      required: [headline, summary, strengths, concerns, recommendation, talking_points, citations]
+      properties:
+        headline: { type: string }
+        summary: { type: string }
+        strengths: { type: array, items: { type: string } }
+        concerns: { type: array, items: { type: string } }
+        peer_comparison: { type: [string, "null"] }
+        recommendation:
+          type: object
+          additionalProperties: false
+          required: [bonus_position, promotion_readiness, rationale]
+          properties:
+            bonus_position: { type: string, enum: [above_cluster, at_cluster, below_cluster] }
+            promotion_readiness: { type: string, enum: [ready, on_track, not_yet] }
+            rationale: { type: string }
+        talking_points: { type: array, items: { type: string } }
+        citations: { type: array, items: { $ref: "#/components/schemas/ReasoningCitation" } }
+    NumberCheck:
+      type: object
+      additionalProperties: false
+      required: [passed, numbers_checked, unsupported, attempts]
+      properties:
+        passed: { type: boolean }
+        numbers_checked: { type: integer }
+        unsupported: { type: array, items: { type: string } }
+        attempts: { type: integer }
+    PeerComparison:
+      type: object
+      additionalProperties: false
+      required: [peer_employee_id, peer_display_name, score_bps_self, score_bps_peer, kras]
+      properties:
+        peer_employee_id: { type: string }
+        peer_display_name: { type: string }
+        score_bps_self: { type: integer }
+        score_bps_peer: { type: integer }
+        kras:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [kra_id, label, self, peer, ratio_milli, cluster_median]
+            properties:
+              kra_id: { type: string }
+              label: { type: string }
+              self: { type: integer }
+              peer: { type: integer }
+              ratio_milli: { type: [integer, "null"], description: "self/peer x 1000 (null when peer is 0)" }
+              cluster_median: { type: integer }
+    ReviewSummary:
+      type: object
+      additionalProperties: false
+      required: [review_id, employee_id, cycle_id, cluster_id, headline, score_bps, reasoning_source, review_hash, created_at]
+      properties:
+        review_id: { type: string }
+        employee_id: { type: string }
+        display_name: { type: string }
+        cycle_id: { type: string }
+        cluster_id: { type: string }
+        peer_employee_id: { type: [string, "null"] }
+        headline: { type: string }
+        score_bps: { type: integer }
+        reasoning_source: { type: string, enum: [0g_private_computer, deterministic_fallback, mock] }
+        review_hash: { $ref: "#/components/schemas/Bytes32" }
+        anchor_tx_hash: { type: [string, "null"] }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+    Review:
+      type: object
+      additionalProperties: false
+      required: [review_id, employee_id, display_name, cycle_id, cluster, layer1, context, peer, vault, reasoning, reasoning_source, inference, number_check, hashes, anchor, created_by, created_at]
+      properties:
+        review_id: { type: string }
+        employee_id: { type: string }
+        display_name: { type: string }
+        cycle_id: { type: string }
+        cluster: { $ref: "#/components/schemas/Cluster" }
+        layer1:
+          type: object
+          additionalProperties: false
+          required: [result, rank, n, percentile_bps, z_milli, score_stats]
+          properties:
+            result: { $ref: "#/components/schemas/ComputeResult" }
+            rank: { type: integer }
+            n: { type: integer }
+            percentile_bps: { type: integer }
+            z_milli: { type: integer }
+            score_stats: { $ref: "#/components/schemas/DistStats" }
+        context: { $ref: "#/components/schemas/ContextReport" }
+        peer: { oneOf: [{ $ref: "#/components/schemas/PeerComparison" }, { type: "null" }] }
+        vault: { $ref: "#/components/schemas/VaultReport" }
+        reasoning: { $ref: "#/components/schemas/Reasoning" }
+        reasoning_source: { type: string, enum: [0g_private_computer, deterministic_fallback, mock] }
+        inference: { oneOf: [{ $ref: "#/components/schemas/InferenceRecord" }, { type: "null" }] }
+        inference_provider: { type: [string, "null"], description: "0G provider address from x_0g_trace (live)" }
+        fallback_reason: { type: [string, "null"] }
+        number_check: { $ref: "#/components/schemas/NumberCheck" }
+        hashes:
+          type: object
+          additionalProperties: false
+          required: [packet_hash, context_hash, inputs_hash, output_hash, review_hash]
+          properties:
+            packet_hash: { $ref: "#/components/schemas/Bytes32" }
+            context_hash: { $ref: "#/components/schemas/Bytes32" }
+            inputs_hash: { $ref: "#/components/schemas/Bytes32" }
+            output_hash: { $ref: "#/components/schemas/Bytes32" }
+            review_hash: { $ref: "#/components/schemas/Bytes32" }
+        anchor:
+          oneOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              required: [numeric_batch_id, tx_hash, chain_mode, anchored_at]
+              properties:
+                numeric_batch_id: { type: integer }
+                tx_hash: { type: string }
+                chain_mode: { type: string, enum: [live, mock] }
+                explorer_url: { type: [string, "null"] }
+                anchored_at: { $ref: "#/components/schemas/Timestamp" }
+        created_by: { type: string }
+        created_at: { $ref: "#/components/schemas/Timestamp" }

@@ -89,3 +89,45 @@ export function usePayout(scorecardId: string | undefined, enabled = true) {
     retry: false,
   });
 }
+
+// ---- CR-004: clusters, context, reviews ----
+export function useClusters() {
+  const pid = usePid();
+  return useQuery({ queryKey: ["clusters", pid], queryFn: () => unwrap(api.GET("/v1/clusters")), enabled: !!pid, staleTime: 60_000 });
+}
+
+export function useClusterBoard(clusterId: string | undefined, cycleId: string | undefined) {
+  const pid = usePid();
+  return useQuery({
+    queryKey: ["cluster-board", clusterId, cycleId, pid],
+    queryFn: () => unwrap(api.GET("/v1/clusters/{cluster_id}/board", { params: { path: { cluster_id: clusterId! }, query: { cycle_id: cycleId! } } })),
+    enabled: !!pid && !!clusterId && !!cycleId,
+  });
+}
+
+export function useEmployeeContext(employeeId: string | undefined, cycleId: string | undefined) {
+  const pid = usePid();
+  return useQuery({
+    queryKey: ["context", employeeId, cycleId, pid],
+    queryFn: () => unwrap(api.GET("/v1/employees/{employee_id}/context", { params: { path: { employee_id: employeeId! }, query: { cycle_id: cycleId! } } })),
+    enabled: !!pid && !!employeeId && !!cycleId,
+  });
+}
+
+export function useReviews(f: { employee_id?: string; cycle_id?: string }) {
+  const pid = usePid();
+  return useQuery({
+    queryKey: ["reviews", f.employee_id, f.cycle_id, pid],
+    queryFn: () => unwrap(api.GET("/v1/reviews", { params: { query: f } })),
+    enabled: !!pid,
+  });
+}
+
+export function useReview(id: string) {
+  const pid = usePid();
+  return useQuery({
+    queryKey: ["review", id, pid],
+    queryFn: () => unwrap(api.GET("/v1/reviews/{review_id}", { params: { path: { review_id: id } } })),
+    enabled: !!pid && !!id,
+  });
+}
