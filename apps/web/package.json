@@ -1,0 +1,35 @@
+{
+  "name": "@proofwork/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint && tsc --noEmit",
+    "mock:api": "pnpm -w exec prism mock spec/openapi.yaml -p 8787 --cors"
+  },
+  "dependencies": {
+    "@proofwork/crypto": "workspace:*",
+    "@proofwork/shared": "workspace:*",
+    "@tanstack/react-query": "5.62.11",
+    "next": "15.1.6",
+    "openapi-fetch": "0.13.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "viem": "2.21.0",
+    "zod": "3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.7.0",
+    "@types/react": "19.0.2",
+    "@types/react-dom": "19.0.2",
+    "autoprefixer": "10.4.20",
+    "eslint": "8.57.1",
+    "eslint-config-next": "15.1.6",
+    "postcss": "8.4.49",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.6.2"
+  }
+}
