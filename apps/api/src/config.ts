@@ -45,6 +45,8 @@ const schema = z.object({
   ASSET_ADDRESS: address,
   ANCHOR_PRIVATE_KEY: optKey,
   PAYOUT_PRIVATE_KEY: optKey,
+  /** On-chain amounts are 1/N of the real ones (testnet funding). 1 = unscaled. */
+  CHAIN_AMOUNT_DIVISOR: z.coerce.number().int().positive().default(1),
 
   WORLD_MODE: mode,
   WORLD_APP_ID: optStr,

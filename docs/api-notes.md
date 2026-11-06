@@ -13,7 +13,7 @@ mocked mode (read from `GET /v1/config/public`).
 
 | Area | Switch | Mock (default) | Live | Live status |
 |---|---|---|---|---|
-| Chain (Arc) | `CHAIN_MODE` | `MockChain`: in-process registry + vault with the same revert rules and payout/revision math as AGENT_B 2.1/2.2, state persisted in SQLite, each cycle pre-funded with 1,000,000 USDC | `ViemChain`: frozen interface ABIs, two role keys, waits for receipts, parses `ScoreAttested` | **Not run yet**: contracts not deployed (no `deployments/arc.json`). Run `chain:probe` then `e2e:chain` once they are. |
+| Chain (Arc) | `CHAIN_MODE` | `MockChain`: in-process registry + vault with the same revert rules and payout/revision math as AGENT_B 2.1/2.2, state persisted in SQLite, each cycle pre-funded with 1,000,000 USDC | `ViemChain`: frozen interface ABIs, two role keys, waits for receipts, parses `ScoreAttested`; wrapped in `ScaledChain` when `CHAIN_AMOUNT_DIVISOR > 1` | **Run live on Arc testnet (5042002)**, Fri 6 Nov 2026: `chain:probe` OK; `e2e:chain` and `e2e:chain --full` passed (anchor, attest, registerPlan, release, revision with `applyRevision` forfeit, verify) at divisor 10000. One run costs about 0.45 USDC of cycle funds + about 0.011 USDC gas per key. |
 | World step-up | `WORLD_MODE` | Accepts `{adapter:"mock", payload:{action, signal, nullifier}}` bound to the server's action + challenge; nullifier replay rejected | World ID **4.0** cloud verify `POST developer.world.org/api/v4/verify/{rp_id}`, IDKit payload forwarded as-is, action/signal (`hashToField`) binding, environment check, replay table | **Not run against the real portal** (unit-tested against a fake portal). Agent Pass fails closed until U1 is answered. Needs CR-002 (`world_rp_context`). |
 | AI draft (0G Private Computer) | `ZEROG_MODE` | Deterministic regex extractor (`provider:"mock"`, `tee_verified:null`) | OpenAI-compatible chat completion with `X-0G-Provider-Trust-Mode: private`, `verify_tee:true`; trace recorded in `InferenceRecord` | **Not run**: no `ZEROG_API_KEY` yet (U2). `zerog:probe` tests it in one command. A failed live call falls back to the mock extractor and is labelled MOCK. |
 | Encrypted replica (0G Storage) | `ZEROG_MODE` | Encrypted payload written to `apps/api/data/replica/<root>.bin` | `@0gfoundation/0g-storage-ts-sdk` upload (Galileo testnet, turbo indexer) | **Not run**: needs `ZEROG_STORAGE_*` + `ZEROG_PRIVATE_KEY`. `zerog:probe` tests it. |
@@ -45,12 +45,13 @@ Optional variables the API also reads (all have defaults; not in the frozen `.en
 | `WEB_ORIGIN` | `http://localhost:3000` | CORS allow-list (comma-separated); named in INTEGRATION 3 |
 | `LOG_LEVEL` | `info` | pino level |
 | `RATE_LIMIT_PER_MIN` | `600` | global per-IP budget (route limits are capped by it) |
+| `CHAIN_AMOUNT_DIVISOR` | `1` | vault runs at 1/N of the real amounts (testnet funding); API amounts stay full scale, targets must divide exactly. Live uses `10000`; the UI must label it (CR-003) |
 | `WORLD_ENVIRONMENT` | `production` | expected World environment in `WORLD_MODE=live` (`staging` for the simulator) |
 
 | Command | Proves |
 |---|---|
 | `pnpm spec:check` | spec, fixtures, vectors (JS + Python + TS crypto), ABIs, generated types are consistent |
-| `pnpm --filter @proofwork/api test` | 102 tests: engine vs vectors and seed expectations, contract guard, claims F1, approvals, chain behaviour, verify, negative tests n01-n18, resilience |
+| `pnpm --filter @proofwork/api test` | 106 tests: engine vs vectors and seed expectations, contract guard, claims F1, approvals, chain behaviour, verify, negative tests n01-n18, resilience |
 | `pnpm e2e:demo` | full story s1 -> c1 -> v1 attest/release -> deny path -> s3 revert -> v2 + applyRevision -> s4 carry-forward -> shred, every number checked against the fixtures (in-process, ~1-2 s). `E2E_BASE_URL=http://localhost:8787` runs it against a server |
 | `pnpm --filter @proofwork/api demo:script [--live]` | prints the exact click order, ids and expected numbers for the demo video |
 | `pnpm --filter @proofwork/api chain:probe` | (live) chain id, roles granted to our two keys, asset decimals, cycle balances, gas |
@@ -86,13 +87,13 @@ Optional variables the API also reads (all have defaults; not in the frozen `.en
 
 ## 5. Known limits (honest list)
 
-1. **Live adapters are untested against real services** (chain, World, 0G): see section 1. The mock paths are what the tests prove.
+1. **World and 0G live adapters are untested against real services** (the chain adapter has run live on Arc): see section 1. The mock paths are what the tests prove.
 2. **Reveal for evidence/scorecards**: the API never hands out evidence or score salts, so the "verify it yourself" panel can recompute commitments only for claims (whose signing package carries the salts). A reveal endpoint for the owner would need a CR.
 3. **World ID 4.0** needs a server-signed RP context for IDKit (CR-002); the signing algorithm is not implemented yet.
 4. **Evidence lifecycle** `provisional -> vested` happens when the holdback is released (after `maturity_days`, 90 for engineering); `disputed` evidence and manager confirmation of unverified items have no endpoint in spec v1.
 5. **Connectors** read the seed scenario; there are no real GitHub/Jira/CRM integrations.
 6. **Single process**: the chain-write lock and rate limits are in-memory, so run one API instance.
-7. **Mock chain funding**: each cycle starts with 1,000,000 USDC in mock mode; in live mode the vault must be funded by Agent B's `fund` script, and every `e2e:chain` run reserves real testnet funds.
+7. **Mock chain funding**: each cycle starts with 1,000,000 USDC in mock mode; in live mode the vault must be funded by Agent B's `fund` script, and every `e2e:chain` run reserves real testnet funds (entitlement / `CHAIN_AMOUNT_DIVISOR`; about 0.45 USDC at 10000, so the 5 USDC in cycle 1 covers about 10 runs).
 8. **No ZK proofs** in this build (roadmap).
 
 ## 6. Change requests from Agent A
@@ -100,7 +101,8 @@ Optional variables the API also reads (all have defaults; not in the frozen `.en
 | CR | What | Status |
 |---|---|---|
 | CR-001 | optional `ai_flags` on `CosignView` | **merged** (no reply within 30 min = ack); spec 1.1.0; the co-signer view now returns the flags |
-| CR-002 | optional `world_rp_context` on `Approval` and `CosignView` (World ID 4.0 RP signatures, U1) | proposed, no reply yet |
+| CR-002 | optional `world_rp_context` on `Approval` and `CosignView` (World ID 4.0 RP signatures, U1) | acked by B; merge waits for the U1 answer (signing algorithm) |
+| CR-003 | optional `PublicConfig.chain.amount_divisor` (on-chain amounts scaled for testnet funding) | proposed |
 
 Spec build on Windows: run the vector generator as `python -I -X utf8 spec/vectors/generate.py` (needs `eth-account`, `pyyaml`); without `-X utf8` Python writes cp1252 and truncates `vectors.json`.
 

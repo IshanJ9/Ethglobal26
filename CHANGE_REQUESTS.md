@@ -50,3 +50,14 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Status: proposed
 - Other agent reply: ack (B, Fri 6 Nov 2026). The web client will pass `world_rp_context` to IDKit unchanged when present and ignore it when absent; mock mode unchanged.
 - Merged in:
+
+### CR-003  Optional on-chain amount divisor in PublicConfig (testnet funding)
+- Proposer: A        Date/time (IST): Fri 6 Nov 2026
+- Kind: additive
+- Problem: the fixture targets are 5,000 USDC, but the Arc testnet vault holds 5 USDC per cycle (20 USDC grant), so a real release reverts with "insufficient cycle balance". B suggested scaling inside A's chain adapter (no fixture change). A now runs the vault at 1/`CHAIN_AMOUNT_DIVISOR` of the real amounts: the target is divided going out, and payout amounts are multiplied back, so every API amount stays at full scale (exact for all seed fixtures; non-divisible targets are refused, never rounded). Live `.env` uses 10000 (Asha's 5,000 USDC entitlement reserves 0.5 USDC on chain). The UI must say so, and needs the number from the API instead of hardcoding it.
+- Proposal: `spec/openapi.yaml`: in `PublicConfig.chain` add optional `amount_divisor: { type: integer, minimum: 1, description: "On-chain amounts are the API amounts divided by this (testnet funding). 1 or absent = unscaled." }`. A serves it when `CHAIN_AMOUNT_DIVISOR > 1`.
+- Impact on the other agent: B shows "on-chain amounts scaled 1:N" next to payouts and explorer links when `amount_divisor > 1`; anything compared against the explorer (vault balances, Transfer amounts) must be divided by N.
+- Workaround until merged: B hardcodes the label to 1:10000 when `chain_mode == "live"`.
+- Status: proposed
+- Other agent reply:
+- Merged in:

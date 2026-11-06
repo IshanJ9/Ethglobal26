@@ -17,6 +17,7 @@ import { loadContract } from "./contract/openapi.ts";
 import { systemClock, type Clock } from "./util.ts";
 import { MockChain } from "./chain/mock.ts";
 import { ViemChain } from "./chain/viem.ts";
+import { ScaledChain } from "./chain/scaled.ts";
 import { ChainService } from "./chain/service.ts";
 import type { ChainClient } from "./chain/types.ts";
 import { ScorecardService } from "./scoring/scorecards.ts";
@@ -63,7 +64,8 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   const claims = new ClaimService(db, claimsRepo, org, ledger, audit, envelope, drafter, world, config, clock);
   const jwt = new Jwt(config.JWT_SECRET);
 
-  const chain: ChainClient = o.chain ?? (config.CHAIN_MODE === "live" ? new ViemChain(config) : new MockChain(db, clock));
+  const baseChain: ChainClient = o.chain ?? (config.CHAIN_MODE === "live" ? new ViemChain(config) : new MockChain(db, clock));
+  const chain: ChainClient = config.CHAIN_AMOUNT_DIVISOR > 1 ? new ScaledChain(baseChain, config.CHAIN_AMOUNT_DIVISOR) : baseChain;
   const chains = chainRepo(db);
   const scorecardSvc = new ScorecardService(db, scorecards, org, compute, audit, envelope, world, config, clock);
   const chainSvc = new ChainService(db, chain, chains, scorecards, scorecardSvc, evidence, org, audit, config, clock);
