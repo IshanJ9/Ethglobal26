@@ -791,6 +791,28 @@ paths:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/AgentCheckpoint" } } } }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /v1/zk/proofs:
+    post:
+      tags: [zk]
+      operationId: recordZkProof
+      security: []
+      description: "Public relay: records a zero-knowledge score proof permanently on Arc (ScoreProofRegistry.record). The contract itself verifies the Groth16 proof and requires the commitment to equal the root the company anchored in that batch; invalid proofs revert. Idempotent. No login, no gas for the employee."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [proof, public_signals, numeric_batch_id]
+              properties:
+                proof: { type: object, description: "snarkjs Groth16 proof (pi_a, pi_b, pi_c)" }
+                public_signals: { type: array, minItems: 3, maxItems: 3, items: { type: string, pattern: "^[0-9]+$" } }
+                numeric_batch_id: { type: integer }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ZkProofRecord" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -1883,3 +1905,16 @@ components:
         reason: { type: [string, "null"] }
         created_at: { $ref: "#/components/schemas/Timestamp" }
         decided_at: { type: [string, "null"] }
+    ZkProofRecord:
+      type: object
+      additionalProperties: false
+      required: [key, contract, chain_id, tx_hash, explorer_url, already_recorded, threshold_bps, commitment_hex]
+      properties:
+        key: { $ref: "#/components/schemas/Bytes32" }
+        contract: { type: string }
+        chain_id: { type: integer }
+        tx_hash: { type: [string, "null"] }
+        explorer_url: { type: [string, "null"] }
+        already_recorded: { type: boolean }
+        threshold_bps: { type: integer }
+        commitment_hex: { $ref: "#/components/schemas/Bytes32" }

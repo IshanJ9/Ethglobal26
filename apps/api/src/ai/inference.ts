@@ -189,6 +189,28 @@ export class ZeroGInference implements InferenceClient {
   }
 }
 
+/** 0G Private Computer chat with OpenAI-style function calling (the evidence agent's planner). */
+export async function zeroGToolChat(
+  c: { baseUrl: string; apiKey: string; model: string },
+  messages: unknown[],
+  tools: unknown[],
+): Promise<{ message: { content?: string | null; tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }> }; request_id: string; zg_res_key: string | null; model: string }> {
+  const res = await fetch(`${c.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${c.apiKey}`, "X-0G-Provider-Trust-Mode": "private" },
+    body: JSON.stringify({ model: c.model, temperature: 0, max_tokens: 600, chat_template_kwargs: { enable_thinking: false }, tool_choice: "auto", tools, messages }),
+    signal: AbortSignal.timeout(45_000),
+  });
+  if (!res.ok) throw new Error(`0G tool chat HTTP ${res.status}`);
+  const body = (await res.json()) as any;
+  return {
+    message: body?.choices?.[0]?.message ?? {},
+    request_id: res.headers.get("x-request-id") ?? String(body?.id ?? "unknown"),
+    zg_res_key: res.headers.get("zg-res-key"),
+    model: String(body?.model ?? c.model),
+  };
+}
+
 // ---- the draft step ----
 export interface DraftResult {
   body: ClaimBody;

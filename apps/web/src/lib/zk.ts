@@ -2,7 +2,10 @@
 // employee's browser: the score and salt never leave it. Anyone can verify a shared bundle locally
 // (vkey) and on Arc (ScoreThresholdVerifier.verifyProof), and check the commitment the company anchored.
 import { createPublicClient, http, parseAbi, type Address } from "viem";
-import type { Schemas } from "@/lib/api";
+import { api, unwrap, type Schemas } from "@/lib/api";
+import arc from "../../../../deployments/arc.json";
+
+export const ZK_PROOF_REGISTRY = (arc as unknown as { zkProofRegistry?: string }).zkProofRegistry ?? "";
 
 export type ZkWitness = Schemas["ZkWitness"];
 export type ZkCommitment = Schemas["ZkCommitment"];
@@ -55,6 +58,7 @@ export interface VerifyResult {
   local: boolean;
   onchain: boolean | null;
   anchored: boolean | null;
+  recorded: boolean | null;
   binding: boolean;
   threshold: number;
   commitmentHex: string;
@@ -68,7 +72,7 @@ export async function verifyBundle(b: ProofBundle): Promise<VerifyResult> {
   const commitmentHex = "0x" + BigInt(commitment).toString(16).padStart(64, "0");
   const out: VerifyResult = {
     local: await s.groth16.verify(vkey, b.publicSignals, b.proof),
-    onchain: null, anchored: null,
+    onchain: null, anchored: null, recorded: null,
     binding: BigInt(binding) === (await bindingOf(b.scorecard_id)),
     threshold: Number(threshold), commitmentHex,
   };
@@ -88,8 +92,19 @@ export async function verifyBundle(b: ProofBundle): Promise<VerifyResult> {
       functionName: "batchRoot", args: [BigInt(b.numeric_batch_id)],
     })) as string;
     out.anchored = BigInt(root) === BigInt(commitment);
+    if (ZK_PROOF_REGISTRY) {
+      out.recorded = (await c.readContract({
+        address: ZK_PROOF_REGISTRY as Address,
+        abi: parseAbi(["function isProven(uint256 commitment, uint256 threshold) view returns (bool)"]),
+        functionName: "isProven", args: [BigInt(commitment), BigInt(threshold)],
+      })) as boolean;
+    }
   } catch (e) {
     out.error = e instanceof Error ? e.message.split("\n")[0] : String(e);
   }
   return out;
 }
+
+/** Ask the API to record the proof permanently on Arc (the contract re-verifies it; the employee pays no gas). */
+export const recordOnChain = (b: ProofBundle) =>
+  unwrap(api.POST("/v1/zk/proofs", { body: { proof: b.proof as Record<string, never>, public_signals: b.publicSignals, numeric_batch_id: b.numeric_batch_id } }));

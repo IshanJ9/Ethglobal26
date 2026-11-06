@@ -1,3 +1,4 @@
+import { zeroGToolChat } from "../ai/inference.ts";
 // Evidence agent (AGENT_A section 4): an orchestrator over five DETERMINISTIC connectors. Numbers in
 // evidence come only from connector return values written by code, never from model text. In the demo the
 // connectors read spec/fixtures/seed-scenario.json "collect" steps (expanded with the reference rule).
@@ -86,7 +87,50 @@ export class RunService {
     private readonly connector: Connector = seedConnector,
     /** Live 0G client writes the run's summary note; it never produces evidence or numbers. */
     private readonly inference?: InferenceClient,
+    /** 0G Private Computer planner: the model chooses which connector tools to call (function calling). */
+    private readonly planner?: { baseUrl: string; apiKey: string; model: string } | null,
   ) {}
+
+  private static readonly TOOL_DESCRIPTIONS: Record<Tool, string> = {
+    git: "Source control: merged pull requests, code reviews, reverts.",
+    tickets: "Ticket system: incidents, bug fixes, delivery deadlines.",
+    crm: "CRM: deals, pipeline, client engagements.",
+    hris: "HR system: past performance reviews, role history.",
+    worklog: "Work log and manual entries: meetings, mentoring, co-signed client work.",
+  };
+
+  /**
+   * 0G function calling: the model decides which connectors to call for this employee. Code executes each call;
+   * the model never sees or writes evidence values. Returns the tools in the order the model asked for them, with
+   * the 0G request ids, or null when the planner is unavailable.
+   */
+  private async plan(employeeId: string): Promise<{ order: Array<{ tool: Tool; call_id: string; request_id: string }>; request_ids: string[]; model: string; final: string } | null> {
+    if (!this.planner) return null;
+    const emp = this.org.employee(employeeId);
+    const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.tool, description: RunService.TOOL_DESCRIPTIONS[t.tool], parameters: { type: "object", properties: { reason: { type: "string", description: "why this source is relevant" } }, required: ["reason"] } } }));
+    const messages: any[] = [
+      { role: "system", content: "You are kra-agent, an evidence-collection agent. Call the tools whose systems hold work evidence for this employee's role. You never see or write numbers: tools only report that they ran. When done, reply with one short sentence of what you collected." },
+      { role: "user", content: `Collect this cycle's evidence for ${emp?.display_name ?? employeeId}, department ${emp?.department ?? "unknown"}, level ${emp?.level ?? "unknown"}.` },
+    ];
+    const order: Array<{ tool: Tool; call_id: string; request_id: string }> = [];
+    const request_ids: string[] = [];
+    let model = this.planner.model;
+    for (let round = 0; round < 3; round++) {
+      const r = await zeroGToolChat(this.planner, messages, tools).catch(() => zeroGToolChat(this.planner!, messages, tools)); // one retry on a network blip
+      request_ids.push(r.request_id);
+      model = r.model;
+      const calls = r.message.tool_calls ?? [];
+      if (!calls.length) return { order, request_ids, model, final: String(r.message.content ?? "").slice(0, 300) };
+      messages.push({ role: "assistant", content: r.message.content ?? "", tool_calls: calls });
+      for (const c of calls) {
+        const tool = c.function.name as Tool;
+        const known = TOOLS.some((t) => t.tool === tool);
+        if (known && !order.some((o) => o.tool === tool)) order.push({ tool, call_id: c.id, request_id: r.request_id });
+        messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(known ? { ran: true } : { error: "unknown tool" }) });
+      }
+    }
+    return { order, request_ids, model, final: "" };
+  }
 
   private static readonly SUMMARY_PROMPT =
     "You write one neutral sentence summarising which evidence-collection tools ran and how many items each returned. " +
@@ -157,7 +201,20 @@ export class RunService {
     const calls: Run["tool_calls"] = [];
     const ids: string[] = [];
     try {
-      for (const t of TOOLS) {
+      // 0G decides which tools to call; a coverage guard (code) still runs any tool it skipped, labelled as such.
+      let planned: Awaited<ReturnType<RunService["plan"]>> = null;
+      try {
+        planned = await this.plan(r.employee_id);
+      } catch {
+        planned = null; // 0G unavailable: deterministic sweep
+      }
+      const ordered = planned
+        ? [
+            ...planned.order.map((o) => ({ ...TOOLS.find((t) => t.tool === o.tool)!, by: `0G tool call ${o.call_id}` })),
+            ...TOOLS.filter((t) => !planned!.order.some((o) => o.tool === t.tool)).map((t) => ({ ...t, by: "coverage guard (not chosen by the agent)" })),
+          ]
+        : TOOLS.map((t) => ({ ...t, by: "deterministic sweep" }));
+      for (const t of ordered) {
         try {
           const items = await this.connector(t.tool, t.sources, r.employee_id, r.cycle_id);
           let created = 0;
@@ -166,7 +223,7 @@ export class RunService {
             ids.push(res.item.evidence_id);
             if (res.created) created++;
           }
-          calls.push({ tool: t.tool, ok: true, items_found: items.length, note: `${created} new, ${items.length - created} already in ledger` });
+          calls.push({ tool: t.tool, ok: true, items_found: items.length, note: `${created} new, ${items.length - created} already in ledger · ${t.by}` });
         } catch (e) {
           calls.push({ tool: t.tool, ok: false, items_found: 0, note: (e as Error).message.slice(0, 200) });
         }
@@ -175,7 +232,19 @@ export class RunService {
       // The summary note is text only; it never feeds a number into evidence or scores.
       const note = `Collected ${ids.length} evidence item(s) via ${calls.filter((c) => c.ok).length}/${TOOLS.length} tools.`;
       const now = iso(this.clock.now());
-      const inference = await this.trace(runId, note, calls, now);
+      const inference: InferenceRecord = planned
+        ? {
+            provider: "0g_private_computer",
+            model: planned.model,
+            mode: "live",
+            request_id: planned.request_ids.join(","),
+            zg_res_key: null,
+            tee_verified: null,
+            prompt_hash: keccakUtf8("kra-agent tool planner v1"),
+            output_hash: keccakUtf8(JSON.stringify(planned.order.map((o) => o.tool)) + planned.final),
+            created_at: now,
+          }
+        : await this.trace(runId, note, calls, now);
       this.update(runId, { status: "succeeded", inference_json: JSON.stringify(inference), finished_at: now });
       this.audit.append(now, "agent", "run.succeeded", runId, { evidence_count: ids.length });
     } catch (e) {

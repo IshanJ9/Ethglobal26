@@ -925,6 +925,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/zk/proofs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Public relay: records a zero-knowledge score proof permanently on Arc (ScoreProofRegistry.record). The contract itself verifies the Groth16 proof and requires the commitment to equal the root the company anchored in that batch; invalid proofs revert. Idempotent. No login, no gas for the employee. */
+        post: operations["recordZkProof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1830,6 +1847,16 @@ export interface components {
             reason: string | null;
             created_at: components["schemas"]["Timestamp"];
             decided_at: string | null;
+        };
+        ZkProofRecord: {
+            key: components["schemas"]["Bytes32"];
+            contract: string;
+            chain_id: number;
+            tx_hash: string | null;
+            explorer_url: string | null;
+            already_recorded: boolean;
+            threshold_bps: number;
+            commitment_hex: components["schemas"]["Bytes32"];
         };
     };
     responses: {
@@ -3338,6 +3365,37 @@ export interface operations {
                 };
             };
             404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    recordZkProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description snarkjs Groth16 proof (pi_a, pi_b, pi_c) */
+                    proof: Record<string, never>;
+                    public_signals: string[];
+                    numeric_batch_id: number;
+                };
+            };
+        };
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZkProofRecord"];
+                };
+            };
+            400: components["responses"]["Error"];
             409: components["responses"]["Error"];
         };
     };

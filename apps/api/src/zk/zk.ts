@@ -7,7 +7,7 @@ import { randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 import { keccakUtf8, type Hex } from "@proofwork/crypto";
 import type { components } from "@proofwork/shared";
-import { errors } from "../errors.ts";
+import { ApiError, errors } from "../errors.ts";
 import { canApprove, canView, isInternal } from "../auth/auth.ts";
 import type { AuditRepo } from "../db/audit.ts";
 import type { DB } from "../db/index.ts";
@@ -17,6 +17,14 @@ import type { ChainClient } from "../chain/types.ts";
 import type { Config } from "../config.ts";
 import type { Envelope } from "../ledger/envelope.ts";
 import { iso, type Clock } from "../util.ts";
+import { createPublicClient, createWalletClient, defineChain, encodeAbiParameters, fallback, http, keccak256 as vkeccak, parseAbi } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+
+const SPR_ABI = parseAbi([
+  "function record(uint256[2] a, uint256[2][2] b, uint256[2] c, uint256[3] pub, uint64 batchId) returns (bytes32)",
+  "function isProven(uint256 commitment, uint256 threshold) view returns (bool)",
+]);
+export type ZkProofRecord = components["schemas"]["ZkProofRecord"];
 
 export type ZkCommitment = components["schemas"]["ZkCommitment"];
 export type ZkWitness = components["schemas"]["ZkWitness"];
@@ -123,6 +131,51 @@ export class ZkService {
         .run(scorecardId, sc.employee_id, Number(score), commitment.toString(), binding.toString(), wrapped, this.envelope.encrypt(dek, salt.toString()), JSON.stringify(anchor), p.persona_id, at);
       this.audit.append(at, p.persona_id, "zk.committed", scorecardId, { commitment: hex, numeric_batch_id: numeric, tx_hash: txHash });
       return this.toApi(this.row(scorecardId)!);
+    });
+  }
+
+  /**
+   * Public relay: record a proof on Arc. The contract verifies the Groth16 proof and the anchored commitment;
+   * we only pay the gas (anchor key, under the shared chain lock). Idempotent.
+   */
+  async recordProof(body: { proof: any; public_signals: string[]; numeric_batch_id: number }): Promise<ZkProofRecord> {
+    const addr = this.config.ZK_PROOF_REGISTRY_ADDRESS;
+    if (!addr || !this.config.ANCHOR_PRIVATE_KEY || !this.config.RPC_URL) throw errors.invalidState("On-chain proof registry is not configured (ZK_PROOF_REGISTRY_ADDRESS)");
+    const sig = body.public_signals.map((x) => BigInt(x));
+    if (sig.length !== 3) throw errors.validation("public_signals must have 3 entries");
+    const p = body.proof;
+    const a = [BigInt(p.pi_a[0]), BigInt(p.pi_a[1])] as const;
+    const b = [[BigInt(p.pi_b[0][1]), BigInt(p.pi_b[0][0])], [BigInt(p.pi_b[1][1]), BigInt(p.pi_b[1][0])]] as const;
+    const c = [BigInt(p.pi_c[0]), BigInt(p.pi_c[1])] as const;
+    const pub = [sig[0], sig[1], sig[2]] as const;
+    const chain = defineChain({ id: this.config.CHAIN_ID, name: "arc-testnet", nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 }, rpcUrls: { default: { http: [this.config.RPC_URL] } } });
+    // Arc's public RPCs rate-limit (429): use both, with retries and backoff
+    const rpcs = [...new Set([this.config.RPC_URL, "https://rpc.testnet.arc.network", "https://rpc.testnet.arc.io"])];
+    const transport = fallback(rpcs.map((u) => http(u, { retryCount: 4, retryDelay: 1500, timeout: 30_000 })));
+    const pubc = createPublicClient({ chain, transport });
+    const key = vkeccak(encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [sig[0], sig[1]]));
+    const commitment_hex = ("0x" + sig[0].toString(16).padStart(64, "0")) as Hex;
+    const base = this.config.EXPLORER_BASE_URL?.replace(/\/$/, "");
+    const out = (tx: string | null, already: boolean): ZkProofRecord => ({
+      key, contract: addr, chain_id: this.config.CHAIN_ID, tx_hash: tx, explorer_url: tx && base ? `${base}/tx/${tx}` : null,
+      already_recorded: already, threshold_bps: Number(sig[1]), commitment_hex,
+    });
+    const already = await pubc.readContract({ address: addr as Hex, abi: SPR_ABI, functionName: "isProven", args: [sig[0], sig[1]] }).catch(() => {
+      throw new ApiError(503, "internal", "Arc RPC is busy (rate limited); try again in a few seconds");
+    });
+    if (already) return out(null, true);
+    return this.exclusive(async () => {
+      const account = privateKeyToAccount(this.config.ANCHOR_PRIVATE_KEY as Hex);
+      let sim;
+      try {
+        sim = await pubc.simulateContract({ account, address: addr as Hex, abi: SPR_ABI, functionName: "record", args: [a, b, c, pub, BigInt(body.numeric_batch_id)] });
+      } catch (e) {
+        throw errors.conflict(`The registry rejected this proof: ${e instanceof Error ? (e as any).shortMessage ?? e.message.split(String.fromCharCode(10))[0] : e}`);
+      }
+      const tx = await createWalletClient({ chain, account, transport }).writeContract(sim.request);
+      await pubc.waitForTransactionReceipt({ hash: tx, timeout: 60_000, pollingInterval: 3_000 }).catch(() => null); // sent; a rate-limited RPC must not hang the request
+      this.audit.append(iso(this.clock.now()), "public", "zk.proof_recorded", commitment_hex, { threshold_bps: Number(sig[1]), tx_hash: tx });
+      return out(tx, false);
     });
   }
 

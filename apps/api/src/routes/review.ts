@@ -56,6 +56,7 @@ export async function reviewRoutes(app: FastifyInstance, { svc }: { svc: Service
   app.post("/v1/agent-pass/checkpoints/:checkpoint_id/cancel", auth, async (req) => svc.agentPass.cancel(me(req), (req.params as { checkpoint_id: string }).checkpoint_id));
 
   // ---- zero-knowledge score proofs ----
+  app.post("/v1/zk/proofs", async (req) => svc.zk.recordProof(req.body as { proof: unknown; public_signals: string[]; numeric_batch_id: number }));
   app.post("/v1/scorecards/:scorecard_id/zk-commit", auth, async (req) => svc.zk.commit(me(req), (req.params as { scorecard_id: string }).scorecard_id));
   app.get("/v1/scorecards/:scorecard_id/zk-commit", auth, async (req) => svc.zk.get(me(req), (req.params as { scorecard_id: string }).scorecard_id));
   app.get("/v1/scorecards/:scorecard_id/zk-witness", auth, async (req) => svc.zk.witness(me(req), (req.params as { scorecard_id: string }).scorecard_id));

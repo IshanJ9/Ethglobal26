@@ -92,7 +92,7 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   const chainSvc = new ChainService(db, chain, chains, scorecards, scorecardSvc, evidence, org, audit, config, clock);
   const agent = buildPublicConfig(config).agent;
   const agentIdentity = { ens_name: agent.ens_name, address: agent.address, agent_pass: "mock" as const };
-  const runs = new RunService(db, org, ledger, audit, clock, agentIdentity, o.connector, inference);
+  const runs = new RunService(db, org, ledger, audit, clock, agentIdentity, o.connector, inference, config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL ? { baseUrl: config.ZEROG_BASE_URL ?? "https://router-api.0g.ai/v1", apiKey: config.ZEROG_API_KEY, model: config.ZEROG_MODEL } : null);
   const ens = new EnsDirectory(config, db, agent.address, log);
   ens.onAgentName((name) => (agentIdentity.ens_name = name));
   ens.start(o.ens !== undefined ? o.ens : config.ENS_NETWORK === "none" ? null : new EnsResolver(config));

@@ -15,5 +15,7 @@
   },
   "deployedAt": "2026-11-06T10:08:07Z",
   "zkVerifier": "0x1907a282369b7CeE9cf169F43d222d6d13F46728",
-  "zkVerifierNote": "ScoreThresholdVerifier (snarkjs Groth16, packages/zk); deploy tx 0x2ef55a6b...8d4a. ZK commitments anchored on the registry as batch ids >= 2e9."
+  "zkVerifierNote": "ScoreThresholdVerifier (snarkjs Groth16, packages/zk); deploy tx 0x2ef55a6b...8d4a. ZK commitments anchored on the registry as batch ids >= 2e9.",
+  "zkProofRegistry": "0x5ab3EFC23aC16cF22475EAd577888375aE21aE66",
+  "zkProofRegistryNote": "ScoreProofRegistry: records Groth16 score proofs after verifyProof + anchored-commitment check; deploy tx 0xe35d1a76...1cfb"
 }
