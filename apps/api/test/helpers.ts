@@ -5,6 +5,10 @@ import { parseConfig, type Config } from "../src/config.ts";
 import { buildApp } from "../src/server.ts";
 import type { ServiceOverrides } from "../src/services.ts";
 import type { Clock } from "../src/util.ts";
+import { LocalReplicaStore } from "../src/replica/replica.ts";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 /** Deterministic, mock-everything config for tests. Never reads apps/api/.env. */
 export function testConfig(overrides: Record<string, string> = {}): Config {
@@ -22,8 +26,12 @@ export function testConfig(overrides: Record<string, string> = {}): Config {
   });
 }
 
+/** Tests never write replicas into the repo: default to a throwaway temp dir. */
 export const testApp = (overrides: Record<string, string> = {}, services?: ServiceOverrides) =>
-  buildApp(testConfig(overrides), { logger: false, services });
+  buildApp(testConfig(overrides), {
+    logger: false,
+    services: { replica: new LocalReplicaStore(mkdtempSync(join(tmpdir(), "pw-test-replica-"))), ...services },
+  });
 
 /** spec/vectors persona_key_rule: keccak256(utf8('proofwork-demo-persona:' + persona_id)). DEMO ONLY. */
 export const personaAccount = (personaId: string) => privateKeyToAccount(keccak256(stringToBytes(`proofwork-demo-persona:${personaId}`)));

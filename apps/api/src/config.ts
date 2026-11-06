@@ -27,6 +27,8 @@ const schema = z.object({
   HOST: z.string().default("0.0.0.0"),
   WEB_ORIGIN: z.string().default("http://localhost:3000"),
   LOG_LEVEL: z.string().default("info"),
+  /** Global per-IP request budget per minute (internal; not in .env.example). */
+  RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(600),
   AUTH_MODE: z.enum(["dev", "sso"]).default("dev"),
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 chars"),
   ORG_SECRET: bytes32,
@@ -48,6 +50,8 @@ const schema = z.object({
   WORLD_APP_ID: optStr,
   WORLD_RP_ID: optStr,
   WORLD_SIGNING_KEY: optStr,
+  /** Expected World environment (internal; production unless testing with the staging simulator). */
+  WORLD_ENVIRONMENT: z.enum(["production", "staging", "sandbox"]).default("production"),
 
   ZEROG_MODE: mode,
   ZEROG_BASE_URL: z.string().default("https://router-api.0g.ai/v1"),
@@ -87,6 +91,9 @@ export function parseConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (c.CHAIN_MODE === "live") {
     const missing = (["RPC_URL", "ANCHOR_PRIVATE_KEY", "PAYOUT_PRIVATE_KEY"] as const).filter((k) => !c[k]);
     if (missing.length) throw new Error(`CHAIN_MODE=live requires: ${missing.join(", ")}`);
+  }
+  if (c.NODE_ENV === "production" && c.WEB_ORIGIN.split(",").some((o) => o.trim() === "*")) {
+    throw new Error("WEB_ORIGIN must list explicit origins in production (no '*')");
   }
   const rel = c.DATABASE_URL.replace(/^file:/, "");
   const dbPath = rel === ":memory:" ? rel : resolve(API_DIR, rel);

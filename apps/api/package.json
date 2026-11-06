@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/main.ts",
     "start": "tsx src/main.ts",
@@ -12,9 +14,12 @@
     "keys:gen": "tsx scripts/gen-keys.ts",
     "seed:reset": "tsx scripts/seed-reset.ts",
     "e2e:demo": "tsx scripts/e2e.ts",
-    "e2e:chain": "tsx scripts/e2e.ts --chain"
+    "e2e:chain": "tsx scripts/e2e.ts --chain",
+    "zerog:probe": "tsx scripts/zerog-probe.ts",
+    "chain:probe": "tsx scripts/chain-probe.ts"
   },
   "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "1.2.13",
     "@fastify/cors": "^11.4.1",
     "@fastify/helmet": "^13.2.0",
     "@fastify/rate-limit": "^11.2.2",
@@ -23,6 +28,7 @@
     "ajv": "8.17.1",
     "ajv-formats": "3.0.1",
     "better-sqlite3": "^13.0.3",
+    "ethers": "6.13.1",
     "fastify": "^5.12.8",
     "jose": "^6.2.15",
     "pino": "^10.4.0",

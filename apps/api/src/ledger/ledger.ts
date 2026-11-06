@@ -74,6 +74,11 @@ export function evidenceCore(i: EvidenceIngest) {
 }
 
 export class Ledger {
+  /** Called after a NEW item is committed (replica queue). Set by the service container. */
+  onIngested?: (evidenceId: string) => void;
+  /** Called after a shred with the old replica root (local copies are deleted). */
+  onShredded?: (replicaRoot: string | null) => void;
+
   constructor(
     private readonly db: DB,
     private readonly repo: EvidenceRepo,
@@ -85,6 +90,12 @@ export class Ledger {
 
   /** Returns the stored item and whether it was newly created (false = idempotent duplicate). */
   ingest(input: EvidenceIngest, opts: IngestOptions): { item: EvidenceItem; created: boolean } {
+    const res = this.ingestTx(input, opts);
+    if (res.created) this.onIngested?.(res.item.evidence_id);
+    return res.created && this.onIngested ? { ...res, item: toEvidenceItem(this.repo.get(res.item.evidence_id)!) } : res;
+  }
+
+  private ingestTx(input: EvidenceIngest, opts: IngestOptions): { item: EvidenceItem; created: boolean } {
     if (!this.org.employee(input.employee_id)) throw errors.validation(`Unknown employee_id ${input.employee_id}`);
     if (!this.org.cycle(input.cycle_id)) throw errors.validation(`Unknown cycle_id ${input.cycle_id}`);
     for (const o of input.observations) {
@@ -185,12 +196,14 @@ export class Ledger {
     const r = this.repo.get(evidenceId);
     if (!r) throw errors.notFound("Evidence not found");
     if (r.status !== "shredded") {
+      const oldRoot = r.replica_root ?? null;
       const at = iso(this.clock.now());
       this.db.transaction(() => {
         this.repo.shred(evidenceId, at);
         const flagged = this.repo.flagScorecardsUsing(evidenceId);
         this.audit.append(at, actor, "evidence.shredded", evidenceId, { from_status: r.status, commitment: r.commitment, scorecards_needing_revision: flagged });
       })();
+      this.onShredded?.(oldRoot);
     }
     return toEvidenceItem(this.repo.get(evidenceId)!);
   }

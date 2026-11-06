@@ -3,6 +3,8 @@
 import Fastify, { type FastifyError, type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
+import { registerIdempotency } from "./http/idempotency.ts";
 import { SPEC_VERSION, type Config } from "./config.ts";
 import { ApiError, errors } from "./errors.ts";
 import { registerContractGuard } from "./contract/guard.ts";
@@ -49,11 +51,39 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
     }
   });
 
+  const svc = buildServices(config, opts.services, (m, d) => app.log.warn(d ?? {}, m));
+  app.decorate("svc", svc);
+  app.addHook("onClose", async () => {
+    if (!opts.services?.db) svc.db.close();
+  });
+
+  // Stricter per-route limits (set before the plugin reads route config). Errors use the rate_limited code.
+  const ROUTE_LIMITS: Record<string, number> = {
+    "POST /v1/dev/login": 30,
+    "POST /v1/claims": 30, // AI draft call
+    "GET /v1/cosign/view": 60,
+    "POST /v1/cosign/sign": 30,
+    "POST /v1/cosign/decline": 30,
+    "POST /v1/verify": 120,
+  };
+  app.addHook("onRoute", (r) => {
+    const m = Array.isArray(r.method) ? r.method[0] : r.method;
+    const max = ROUTE_LIMITS[`${m} ${r.url}`];
+    if (max) r.config = { ...(r.config as object), rateLimit: { max: Math.min(max, config.RATE_LIMIT_PER_MIN), timeWindow: "1 minute" } } as any;
+  });
+  await app.register(rateLimit, {
+    global: true,
+    max: config.RATE_LIMIT_PER_MIN,
+    timeWindow: "1 minute",
+    errorResponseBuilder: (_req, ctx) => ({ statusCode: 429, code: "RATE_LIMITED", message: `Rate limit exceeded; retry in ${ctx.after}` }),
+  });
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "same-site" } });
   await app.register(cors, {
     origin: config.WEB_ORIGIN.split(",").map((s) => s.trim()),
     credentials: false,
+    methods: ["GET", "POST", "PATCH", "OPTIONS"],
     allowedHeaders: ["authorization", "content-type", "idempotency-key", "x-cosign-token"],
+    maxAge: 600,
     exposedHeaders: ["x-spec-version"],
   });
 
@@ -62,6 +92,7 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
   });
 
   registerContractGuard(app, { validateResponses: config.NODE_ENV !== "production" });
+  registerIdempotency(app, svc.db, svc.clock);
 
   app.setNotFoundHandler((_req, reply) => {
     reply.code(404).send(errors.notFound("Route not found").toBody());
@@ -84,19 +115,13 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
       return reply.code(415).send(errors.badRequest("Content-Type must be application/json").toBody());
     }
     if (fe.statusCode === 429) {
-      return reply.code(429).send(new ApiError(429, "rate_limited", "Too many requests").toBody());
+      return reply.code(429).send(new ApiError(429, "rate_limited", fe.message || "Too many requests").toBody());
     }
     if (fe.statusCode && fe.statusCode >= 400 && fe.statusCode < 500) {
       return reply.code(fe.statusCode).send(errors.badRequest(fe.message).toBody());
     }
     req.log.error({ err: { name: fe.name, code: fe.code } }, "unhandled error");
     return reply.code(500).send(errors.internal().toBody());
-  });
-
-  const svc = buildServices(config, opts.services, (m, d) => app.log.warn(d ?? {}, m));
-  app.decorate("svc", svc);
-  app.addHook("onClose", async () => {
-    if (!opts.services?.db) svc.db.close();
   });
 
   await app.register(metaRoutes, { config });

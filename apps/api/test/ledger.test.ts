@@ -50,7 +50,8 @@ describe("evidence ledger", () => {
     const a = await app.inject({ method: "POST", url: "/v1/evidence/ingest", payload: item(), headers: CONNECTOR });
     const b = await app.inject({ method: "POST", url: "/v1/evidence/ingest", payload: item({ observations: [{ metric_key: "deliverables", value: 99 }] }), headers: CONNECTOR });
     expect(b.statusCode).toBe(201);
-    expect(b.json()).toEqual(a.json());
+    // Same item; only the async replica status may have advanced (pending -> stored) in between.
+    expect({ ...b.json(), replica: null }).toEqual({ ...a.json(), replica: null });
     const h = await login(app, "p_hr");
     const list = await app.inject({ method: "GET", url: "/v1/evidence?employee_id=emp_dev_a", headers: h });
     expect(list.json().items).toHaveLength(1);

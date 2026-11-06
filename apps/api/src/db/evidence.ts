@@ -83,6 +83,9 @@ export const evidenceRepo = (db: DB) => ({
   secrets(id: string): { dek_wrapped: string | null; salt_enc: string | null; payload_enc: string | null } | undefined {
     return db.prepare("SELECT dek_wrapped, salt_enc, payload_enc FROM evidence_secrets WHERE evidence_id = ?").get(id) as any;
   },
+  setReplica(id: string, status: string, root: string | null) {
+    db.prepare("UPDATE evidence_secrets SET replica_status = ?, replica_root = ? WHERE evidence_id = ? AND replica_status != 'shredded'").run(status, root, id);
+  },
   /** Crypto-shred: destroy the record key, ciphertexts, salt and replica pointer. Commitment + leaf remain. */
   shred(id: string, at: string) {
     db.prepare("UPDATE evidence_secrets SET dek_wrapped = NULL, salt_enc = NULL, payload_enc = NULL, replica_root = NULL, replica_status = 'shredded' WHERE evidence_id = ?").run(id);

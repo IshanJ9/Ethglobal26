@@ -12,6 +12,7 @@ import { seedScenario } from "../fixtures.ts";
 import { expandEvent } from "../dev/expand.ts";
 import type { EvidenceIngest, Ledger } from "../ledger/ledger.ts";
 import { iso, newId, type Clock } from "../util.ts";
+import type { InferenceClient, InferenceRecord } from "../ai/inference.ts";
 
 export type Run = components["schemas"]["Run"];
 type Tool = "git" | "tickets" | "crm" | "hris" | "worklog";
@@ -83,7 +84,36 @@ export class RunService {
     private readonly clock: Clock,
     private readonly agent: { ens_name: string; address: string; agent_pass: "verified" | "mock" | "unverified" },
     private readonly connector: Connector = seedConnector,
+    /** Live 0G client writes the run's summary note; it never produces evidence or numbers. */
+    private readonly inference?: InferenceClient,
   ) {}
+
+  private static readonly SUMMARY_PROMPT =
+    "You write one neutral sentence summarising which evidence-collection tools ran and how many items each returned. " +
+    'Reply as JSON {"summary": string}. Do not judge performance. Do not add numbers that are not in the input.';
+
+  private async trace(runId: string, note: string, calls: Run["tool_calls"], now: string): Promise<InferenceRecord> {
+    if (this.inference?.mode === "live") {
+      try {
+        const input = JSON.stringify(calls.map((c) => ({ tool: c.tool, ok: c.ok, items_found: c.items_found ?? 0 })));
+        const r = await this.inference.complete(RunService.SUMMARY_PROMPT, input, undefined as never);
+        return r.record;
+      } catch {
+        // fall through to the mock trace; the run itself never depends on the model
+      }
+    }
+    return {
+      provider: "mock",
+      model: "mock-agent-orchestrator-v1",
+      mode: "mock",
+      request_id: "mock_" + keccakUtf8(runId).slice(2, 18),
+      zg_res_key: null,
+      tee_verified: null,
+      prompt_hash: keccakUtf8(RunService.SUMMARY_PROMPT),
+      output_hash: keccakUtf8(note),
+      created_at: now,
+    };
+  }
 
   private get(id: string): RunRow | undefined {
     return this.db.prepare("SELECT * FROM runs WHERE run_id = ?").get(id) as RunRow | undefined;
@@ -145,17 +175,7 @@ export class RunService {
       // The summary note is text only; it never feeds a number into evidence or scores.
       const note = `Collected ${ids.length} evidence item(s) via ${calls.filter((c) => c.ok).length}/${TOOLS.length} tools.`;
       const now = iso(this.clock.now());
-      const inference = {
-        provider: "mock",
-        model: "mock-agent-orchestrator-v1",
-        mode: "mock",
-        request_id: "mock_" + keccakUtf8(runId).slice(2, 18),
-        zg_res_key: null,
-        tee_verified: null,
-        prompt_hash: keccakUtf8(`run:${r.employee_id}:${r.cycle_id}`),
-        output_hash: keccakUtf8(note),
-        created_at: now,
-      };
+      const inference = await this.trace(runId, note, calls, now);
       this.update(runId, { status: "succeeded", inference_json: JSON.stringify(inference), finished_at: now });
       this.audit.append(now, "agent", "run.succeeded", runId, { evidence_count: ids.length });
     } catch (e) {

@@ -23,6 +23,8 @@ import { ScorecardService } from "./scoring/scorecards.ts";
 import { RunService, type Connector } from "./agent/runs.ts";
 import { VerifyService } from "./verify/service.ts";
 import { buildPublicConfig } from "./routes/meta.ts";
+import { defaultReplicaDir, makeReplicaStore, ReplicaService, type ReplicaStore } from "./replica/replica.ts";
+import { API_DIR } from "./config.ts";
 
 export interface ServiceOverrides {
   clock?: Clock;
@@ -31,6 +33,7 @@ export interface ServiceOverrides {
   world?: WorldVerifier;
   chain?: ChainClient;
   connector?: Connector;
+  replica?: ReplicaStore;
 }
 
 export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m: string, d?: Record<string, unknown>) => void = () => {}) {
@@ -45,6 +48,9 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   const envelope = new Envelope(config.DATA_KEY);
   const ledger = new Ledger(db, evidence, org, audit, envelope, clock);
   const compute = new ComputeService(org, evidence, scorecards);
+  const replica = new ReplicaService(o.replica ?? makeReplicaStore(config, defaultReplicaDir(API_DIR), log), evidence, log);
+  ledger.onIngested = (id) => replica.enqueue(id);
+  ledger.onShredded = (root) => void replica.forget(root);
 
   const mockInference = new MockInference(clock);
   let inference: InferenceClient = o.inference ?? mockInference;
@@ -53,7 +59,7 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
     else log("ZEROG_MODE=live but ZEROG_API_KEY/ZEROG_MODEL missing; using mock inference");
   }
   const drafter = new ClaimDrafter(inference, mockInference, loadContract().schema("ClaimBody"), log);
-  const world: WorldVerifier = o.world ?? (config.WORLD_MODE === "live" ? new LiveWorldVerifier() : new MockWorldVerifier());
+  const world: WorldVerifier = o.world ?? (config.WORLD_MODE === "live" ? new LiveWorldVerifier(config.WORLD_RP_ID ?? config.WORLD_APP_ID, { environment: config.WORLD_ENVIRONMENT }) : new MockWorldVerifier());
   const claims = new ClaimService(db, claimsRepo, org, ledger, audit, envelope, drafter, world, config, clock);
   const jwt = new Jwt(config.JWT_SECRET);
 
@@ -62,12 +68,12 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   const scorecardSvc = new ScorecardService(db, scorecards, org, compute, audit, envelope, world, config, clock);
   const chainSvc = new ChainService(db, chain, chains, scorecards, scorecardSvc, evidence, org, audit, config, clock);
   const agent = buildPublicConfig(config).agent;
-  const runs = new RunService(db, org, ledger, audit, clock, { ens_name: agent.ens_name, address: agent.address, agent_pass: "mock" }, o.connector);
+  const runs = new RunService(db, org, ledger, audit, clock, { ens_name: agent.ens_name, address: agent.address, agent_pass: "mock" }, o.connector, inference);
   const verify = new VerifyService(evidence, ledger, chains, chain, scorecards, claimsRepo, org);
 
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,
-    chain, chains, scorecardSvc, chainSvc, runs, verify,
+    chain, chains, scorecardSvc, chainSvc, runs, verify, replica,
   };
 }
 export type Services = ReturnType<typeof buildServices>;

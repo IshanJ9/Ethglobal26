@@ -4,6 +4,10 @@
 //                  registerPlan + release (+ the revision path with --full). Uses a fresh random ORG_SECRET so
 //                  subject ids never collide with earlier runs. Each run reserves real (testnet) cycle funds.
 import { randomBytes } from "node:crypto";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { LocalReplicaStore } from "../src/replica/replica.ts";
 import { loadEnvFile, parseConfig } from "../src/config.ts";
 import { buildApp } from "../src/server.ts";
 import { runDemoStory, type Client } from "../src/dev/demo-story.ts";
@@ -40,7 +44,7 @@ async function main() {
       env.CHAIN_MODE = "mock";
     }
     const config = parseConfig(env);
-    const app = await buildApp(config, { logger: false });
+    const app = await buildApp(config, { logger: false, services: { replica: new LocalReplicaStore(mkdtempSync(join(tmpdir(), "pw-e2e-replica-"))) } });
     client = {
       async call(method, url, body, headers = {}) {
         const res = await app.inject({ method: method as any, url, headers, ...(body !== undefined ? { payload: body as any } : {}) });

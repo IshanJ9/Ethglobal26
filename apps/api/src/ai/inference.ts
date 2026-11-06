@@ -169,7 +169,8 @@ export class ZeroGInference implements InferenceClient {
     });
     if (!res.ok) throw new Error(`0G inference HTTP ${res.status}`);
     const body = (await res.json()) as any;
-    const output = String(body?.choices?.[0]?.message?.content ?? "");
+    // Some providers wrap JSON in ```json fences; the validator downstream still checks the schema.
+    const output = String(body?.choices?.[0]?.message?.content ?? "").replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "");
     const tee = body?.trace?.tee_verified ?? body?.tee_verified ?? body?.x_0g_trace?.tee_verified;
     return {
       output,
