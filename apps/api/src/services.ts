@@ -92,7 +92,7 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   // CR-004: clusters, context, 0G-vault-backed review reasoning
   const clusters = new ClusterService(org, compute, evidence, clock);
   const contextSvc = new ContextService(org, evidence, envelope);
-  const vault = new VaultReader(evidence, envelope, replicaStore, { timeoutMs: 30_000, concurrency: 4, log });
+  const vault = new VaultReader(evidence, envelope, replicaStore, { timeoutMs: 30_000, concurrency: 8, log });
   let reasoner: Reasoner | null = o.reasoner !== undefined ? o.reasoner : null;
   if (o.reasoner === undefined && config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL) {
     reasoner = new ZeroGReasoner(config.ZEROG_BASE_URL, config.ZEROG_API_KEY, config.ZEROG_MODEL, clock);
