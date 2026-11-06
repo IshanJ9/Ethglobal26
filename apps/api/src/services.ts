@@ -39,6 +39,7 @@ import { ReviewService } from "./review/reviews.ts";
 import { ZkService } from "./zk/zk.ts";
 import { AgentPassService } from "./agentpass/agentpass.ts";
 import { AgentService } from "./agents/agents.ts";
+import { PoolService } from "./agents/pool.ts";
 import type { JWTVerifyGetKey } from "jose";
 
 export interface ServiceOverrides {
@@ -116,11 +117,12 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
 
   const zk = new ZkService(db, scorecards, org, envelope, chain, audit, config, clock, (fn) => chainSvc.exclusive(fn));
 
-  const agents = new AgentService(db, org, clusters, contextSvc, audit, clock, config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL ? { baseUrl: config.ZEROG_BASE_URL, apiKey: config.ZEROG_API_KEY, model: config.ZEROG_MODEL } : null);
+  const pool = new PoolService(db, org, audit, config, clock, (fn) => chainSvc.exclusive(fn));
+  const agents = new AgentService(db, org, clusters, contextSvc, audit, clock, config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL ? { baseUrl: config.ZEROG_BASE_URL, apiKey: config.ZEROG_API_KEY, model: config.ZEROG_MODEL } : null, pool);
 
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,
-    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk, agentPass, agents,
+    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk, agentPass, agents, pool,
   };
 }
 export type Services = ReturnType<typeof buildServices>;

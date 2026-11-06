@@ -64,6 +64,7 @@ const schema = z.object({
   ZEROG_PRIVATE_KEY: optStr,
   ZK_VERIFIER_ADDRESS: optStr,
   ZK_PROOF_REGISTRY_ADDRESS: optStr,
+  BONUS_POOL_ADDRESS: optStr,
   ENS_ISSUER_PRIVATE_KEY: optStr,
   /** World ID Agent Pass (auth.world.org OIDC client, device flow). live = the review agent needs a human checkpoint. */
   AGENT_PASS_MODE: z.enum(["off", "live"]).default("off"),

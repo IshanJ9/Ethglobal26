@@ -150,7 +150,7 @@ describe("contract guard", () => {
 
   it("every spec operation has a compiled validator", () => {
     const c = loadContract();
-    expect(c.operations.size).toBe(62); // 45 + CR-004 (clusters, board, context, reviews x3, anchor, acknowledge) + ZK (commit, get, witness) + Agent Pass (create, get, cancel) + ZK proof record
+    expect(c.operations.size).toBe(63); // 45 + CR-004 (clusters, board, context, reviews x3, anchor, acknowledge) + ZK (commit, get, witness) + Agent Pass (create, get, cancel) + ZK proof record
     for (const op of c.operations.values()) expect(op.responses.size).toBeGreaterThan(0);
   });
 });

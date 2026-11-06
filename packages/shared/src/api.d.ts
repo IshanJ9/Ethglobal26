@@ -976,6 +976,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/agents/bonus-allocation/{allocation_id}/settle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description HR only. Settles the agent's allocation on the Arc Studio BonusPool: the payout key creates and funds the pool, the review agent's key proposes the allocation (ALLOCATOR_ROLE), HR approves (APPROVER_ROLE), and bounty/freelance lines are released in USDC immediately. Year-end bonuses stay locked by the contract until the period ends. Idempotent. */
+        post: operations["settleBonusAllocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1967,6 +1984,24 @@ export interface components {
             }[];
             agent: components["schemas"]["AgentTrace"];
             created_at: components["schemas"]["Timestamp"];
+        };
+        BonusSettlement: {
+            allocation_id: string;
+            pool_contract: string;
+            pool_id: components["schemas"]["Bytes32"];
+            onchain_allocation_id: number;
+            budget_onchain: components["schemas"]["Amount"];
+            amount_divisor: number;
+            /** @enum {string} */
+            status: "paid" | "approved_locked_until_period_end";
+            unlocks_at: string | null;
+            txs: {
+                step: string;
+                signed_by: string;
+                tx_hash: string;
+                explorer_url: string | null;
+            }[];
+            settled_at: components["schemas"]["Timestamp"];
         };
     };
     responses: {
@@ -3572,6 +3607,31 @@ export interface operations {
                 };
             };
             403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    settleBonusAllocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BonusSettlement"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
             409: components["responses"]["Error"];
         };
     };

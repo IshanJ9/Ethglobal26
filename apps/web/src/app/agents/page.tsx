@@ -9,6 +9,7 @@ import { Button, Card, ErrorNote, PageTitle } from "@/components/ui";
 
 type Allocation = Schemas["BonusAllocation"];
 type Chat = Schemas["PromotionChat"];
+type Settlement = Schemas["BonusSettlement"];
 type Msg = { role: "user" | "assistant"; content: string };
 
 function AgentFoot({ a }: { a: Schemas["AgentTrace"] }) {
@@ -84,9 +85,41 @@ function BonusPool({ cycleId }: { cycleId: string }) {
           <p className="mt-3 text-sm"><span className="font-medium">Agent rationale:</span> {res.rationale}</p>
           <p className="mt-1 text-xs text-muted">Guardrails: {res.guardrails.join(" · ")}. Bucket {res.bucket_id.slice(0, 10)}…, rationale hash {res.rationale_hash.slice(0, 10)}…</p>
           <AgentFoot a={res.agent} />
+          <Settle allocationId={res.allocation_id} />
         </div>
       ) : null}
     </Card>
+  );
+}
+
+function Settle({ allocationId }: { allocationId: string }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<unknown>(null);
+  const [st, setSt] = useState<Settlement | null>(null);
+  async function go() {
+    setBusy(true); setErr(null);
+    try { setSt(await unwrap(api.POST("/v1/agents/bonus-allocation/{allocation_id}/settle", { params: { path: { allocation_id: allocationId } } }))); } catch (e) { setErr(e); } finally { setBusy(false); }
+  }
+  return (
+    <div className="mt-4 rounded-lg border border-line p-3">
+      {!st ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={go} disabled={busy}>{busy ? "Settling on Arc (4+ transactions)…" : "Settle on Arc BonusPool"}</Button>
+          <span className="text-xs text-muted">HR funds the pool, the review agent proposes with its own key, HR approves, USDC is released. Contract built in Arc Studio.</span>
+        </div>
+      ) : (
+        <div className="text-sm">
+          <p className="font-medium text-chain">{st.status === "paid" ? "✓ Paid in USDC on Arc" : `✓ Approved on Arc. Locked by the contract until ${st.unlocks_at ? new Date(st.unlocks_at).toLocaleDateString() : "period end"} (year-end bonus), then holdback + dispute window.`}</p>
+          <p className="text-xs text-muted">BonusPool {st.pool_contract.slice(0, 10)}… · on-chain allocation #{st.onchain_allocation_id} · {Number(st.budget_onchain) / 1e6} USDC on chain (testnet scale 1:{st.amount_divisor})</p>
+          <ol className="mt-2 space-y-1 text-xs">
+            {st.txs.map((t, i) => (
+              <li key={i}><span className="font-medium">{t.step}</span> · {t.signed_by} · {t.explorer_url ? <a className="font-mono underline" href={t.explorer_url} target="_blank" rel="noreferrer">{t.tx_hash.slice(0, 12)}…</a> : <span className="font-mono">{t.tx_hash.slice(0, 12)}…</span>}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+      <ErrorNote error={err} className="mt-2" />
+    </div>
   );
 }
 

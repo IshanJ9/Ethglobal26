@@ -17,5 +17,7 @@
   "zkVerifier": "0x1907a282369b7CeE9cf169F43d222d6d13F46728",
   "zkVerifierNote": "ScoreThresholdVerifier (snarkjs Groth16, packages/zk); deploy tx 0x2ef55a6b...8d4a. ZK commitments anchored on the registry as batch ids >= 2e9.",
   "zkProofRegistry": "0x5ab3EFC23aC16cF22475EAd577888375aE21aE66",
-  "zkProofRegistryNote": "ScoreProofRegistry: records Groth16 score proofs after verifyProof + anchored-commitment check; deploy tx 0xe35d1a76...1cfb"
+  "zkProofRegistryNote": "ScoreProofRegistry: records Groth16 score proofs after verifyProof + anchored-commitment check; deploy tx 0xe35d1a76...1cfb",
+  "bonusPool": "0x42d450d6dcaf980609ac23ea2639cabdfb8898cf",
+  "bonusPoolNote": "BonusPool: written, tested and deployed in Arc Studio from a Circle developer-controlled wallet (admin 0x1073fbc634efcd9cfd7b76aa02e6616374ceacba). ALLOCATOR = review agent, APPROVER/POOL_ADMIN/DISPUTER = payout key."
 }

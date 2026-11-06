@@ -866,6 +866,17 @@ paths:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/PromotionChat" } } } }
         "403": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /v1/agents/bonus-allocation/{allocation_id}/settle:
+    post:
+      tags: [agents]
+      operationId: settleBonusAllocation
+      description: "HR only. Settles the agent's allocation on the Arc Studio BonusPool: the payout key creates and funds the pool, the review agent's key proposes the allocation (ALLOCATOR_ROLE), HR approves (APPROVER_ROLE), and bounty/freelance lines are released in USDC immediately. Year-end bonuses stay locked by the contract until the period ends. Idempotent."
+      parameters: [{ name: allocation_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/BonusSettlement" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -2065,3 +2076,28 @@ components:
               promotion_readiness: { type: [string, "null"] }
         agent: { $ref: "#/components/schemas/AgentTrace" }
         created_at: { $ref: "#/components/schemas/Timestamp" }
+    BonusSettlement:
+      type: object
+      additionalProperties: false
+      required: [allocation_id, pool_contract, pool_id, onchain_allocation_id, budget_onchain, amount_divisor, status, unlocks_at, txs, settled_at]
+      properties:
+        allocation_id: { type: string }
+        pool_contract: { type: string }
+        pool_id: { $ref: "#/components/schemas/Bytes32" }
+        onchain_allocation_id: { type: integer }
+        budget_onchain: { $ref: "#/components/schemas/Amount" }
+        amount_divisor: { type: integer }
+        status: { type: string, enum: [paid, approved_locked_until_period_end] }
+        unlocks_at: { type: [string, "null"] }
+        txs:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [step, signed_by, tx_hash, explorer_url]
+            properties:
+              step: { type: string }
+              signed_by: { type: string }
+              tx_hash: { type: string }
+              explorer_url: { type: [string, "null"] }
+        settled_at: { $ref: "#/components/schemas/Timestamp" }

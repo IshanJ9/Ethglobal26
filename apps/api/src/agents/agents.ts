@@ -19,6 +19,7 @@ import type { ClusterService } from "../review/clusters.ts";
 import type { ContextService } from "../review/context.ts";
 import { zeroGToolChat } from "../ai/inference.ts";
 import { iso, type Clock } from "../util.ts";
+import type { PoolService } from "./pool.ts";
 
 export type BonusAllocation = components["schemas"]["BonusAllocation"];
 export type PromotionChat = components["schemas"]["PromotionChat"];
@@ -37,6 +38,7 @@ export class AgentService {
     private readonly audit: AuditRepo,
     private readonly clock: Clock,
     private readonly planner: Planner,
+    private readonly pool: PoolService | null = null,
   ) {}
 
   // ---------- tools (executed by code) ----------
@@ -160,6 +162,7 @@ export class AgentService {
       guardrails: [`base split proportional to KRA score above ${FLOOR_BPS / 100}%`, `agent adjustments clipped to ±${MAX_ADJ_BPS / 100}%`, "amounts renormalised by code to the exact budget"],
       created_at: iso(this.clock.now()),
     };
+    this.pool?.save(out, p.persona_id);
     this.audit.append(out.created_at, p.persona_id, "agent.bonus_allocation", out.allocation_id, { cluster_id: b.cluster_id, budget: out.budget, rationale_hash: out.rationale_hash, request_ids: run.request_ids });
     return out;
   }
