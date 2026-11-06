@@ -1,3 +1,6 @@
+import type { ReplicaStore } from "../replica/replica.ts";
+import { keccakUtf8 } from "@proofwork/crypto";
+import { canonicalJson } from "@proofwork/crypto";
 // F1: claim -> AI draft -> signing package -> employee signature -> co-sign grant -> co-signer signs/declines.
 // (AGENT_A 3.9, 3.10; INTEGRATION section 6 F1.)
 import { randomBytes } from "node:crypto";
@@ -76,7 +79,28 @@ export class ClaimService {
     private readonly world: WorldVerifier,
     private readonly config: Config,
     private readonly clock: Clock,
+    /** 0G Storage (or local replica): the claim shown to the co-signer is sealed there and read back at view time. */
+    private readonly replica: ReplicaStore | null = null,
+    private readonly log: (m: string) => void = () => {},
   ) {}
+
+  /** Seal {body, excerpt} with the claim's own key and store it on 0G Storage (background, once per claim). */
+  private sealToVault(id: string) {
+    if (!this.replica) return;
+    const r = this.repo.get(id) as (ClaimRow & { vault_root?: string | null }) | undefined;
+    if (!r || r.vault_root) return;
+    const s = this.db.prepare("SELECT dek_wrapped FROM claim_secrets WHERE claim_id = ?").get(id) as { dek_wrapped: string } | undefined;
+    if (!s?.dek_wrapped) return;
+    const payload = canonicalJson({ body: JSON.parse(r.body_json), excerpt: r.excerpt });
+    const sealed = this.envelope.encrypt(this.envelope.unwrap(s.dek_wrapped), payload);
+    this.replica
+      .put(new TextEncoder().encode(sealed))
+      .then(({ root }) => {
+        this.db.prepare("UPDATE claims SET vault_root = ?, vault_hash = ? WHERE claim_id = ?").run(root, keccakUtf8(payload), id);
+        this.audit.append(this.now(), "system", "claim.vaulted", id, { root, backend: this.replica!.mode === "live" ? "0g_storage" : "local_replica" });
+      })
+      .catch((e) => this.log(`claim ${id} vault upload failed: ${e instanceof Error ? e.message : e}`));
+  }
 
   private now() {
     return iso(this.clock.now());
@@ -322,6 +346,7 @@ export class ClaimService {
       this.repo.insertGrant(g);
       this.audit.append(iso(now), p.persona_id, "cosign.grant_created", id, { grant_id: g.grant_id, auth_method: authMethod, expires_at: g.expires_at });
     })();
+    this.sealToVault(id);
     return { grant_id: g.grant_id, claim_id: id, auth_method: authMethod, expires_at: g.expires_at, url: `/cosign#token=${token}`, token };
   }
 
@@ -350,22 +375,56 @@ export class ClaimService {
   }
 
   /** Minimum view: the one claim, its excerpt, typed data and AI flags. No ids of other things, no scores. */
-  view(token: string | undefined): CosignView {
+  async view(token: string | undefined): Promise<CosignView> {
     const { g, r } = this.resolve(token);
+    // Serve the claim from the sealed copy on 0G Storage: download, decrypt with the claim's key, compare.
+    let body = JSON.parse(r.body_json);
+    let excerpt = r.excerpt;
+    const vr = r as ClaimRow & { vault_root?: string | null; vault_hash?: string | null };
+    const backend = this.replica?.mode === "live" ? "0g_storage" : this.replica ? "local_replica" : "none";
+    const storage: NonNullable<CosignView["provenance"]>["storage"] = { backend: vr.vault_root ? backend : "none", root: vr.vault_root ?? null, verified: false, read_ms: null, note: "" };
+    if (vr.vault_root && this.replica) {
+      const t0 = Date.now();
+      try {
+        const bytes = await Promise.race([this.replica.get(vr.vault_root), new Promise<never>((_, rej) => setTimeout(() => rej(new Error("storage read timed out")), 25_000))]);
+        const s = this.db.prepare("SELECT dek_wrapped FROM claim_secrets WHERE claim_id = ?").get(r.claim_id) as { dek_wrapped: string };
+        const payload = this.envelope.decrypt(this.envelope.unwrap(s.dek_wrapped), new TextDecoder().decode(bytes));
+        storage.read_ms = Date.now() - t0;
+        const fresh = canonicalJson({ body, excerpt });
+        if (keccakUtf8(payload) === vr.vault_hash && payload === fresh) {
+          const v = JSON.parse(payload);
+          body = v.body;
+          excerpt = v.excerpt;
+          storage.verified = true;
+          storage.note = "Read back from storage, decrypted with this claim's key, and identical to the committed claim.";
+        } else {
+          storage.note = "The stored copy does not match the current claim (it was edited after sharing); showing the current claim.";
+        }
+      } catch (e) {
+        storage.note = `Could not read the stored copy (${e instanceof Error ? e.message : e}); showing the local copy.`;
+      }
+    } else {
+      storage.note = "Still uploading to storage; showing the local copy.";
+    }
+    const inf = r.inference_json ? JSON.parse(r.inference_json) : null;
     const employee = this.org.employee(r.employee_id)!;
     this.audit.append(this.now(), `cosigner:${r.claim_id}`, "cosign.viewed", r.claim_id, { grant_id: g.grant_id });
     const v: CosignView = {
       claim_id: r.claim_id,
       auth_method: g.auth_method as CosignView["auth_method"],
       requester_display_name: employee.display_name,
-      body: JSON.parse(r.body_json),
-      evidence_excerpt: r.excerpt,
+      body,
+      evidence_excerpt: excerpt,
       typed_data: JSON.parse(r.typed_data_json!),
       expires_at: g.expires_at,
     };
     if (r.employee_sig) v.employee_signature = r.employee_sig;
     if (g.world_action) v.world_action = g.world_action;
     v.ai_flags = JSON.parse(r.ai_flags_json); // CR-001: the co-signer sees e.g. prompt_injection_suspected
+    v.provenance = {
+      storage,
+      drafted_by: inf ? { provider: String(inf.provider), model: String(inf.model), request_id: String(inf.request_id), tee_verified: inf.tee_verified ?? null } : null,
+    };
     return v;
   }
 

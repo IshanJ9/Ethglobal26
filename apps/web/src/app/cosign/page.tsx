@@ -147,6 +147,25 @@ export default function CosignPage() {
             {employeeSig.data === true ? <span className="text-xs text-chain">✓ verified against this claim</span> : null}
             {employeeSig.data === false ? <span className="text-xs text-danger">✗ does not match this claim</span> : null}
           </dd>
+          <dt className="text-muted">Where this came from</dt>
+          <dd className="space-y-1">
+            {v.provenance ? (
+              <>
+                <p className={v.provenance.storage.verified ? "text-chain" : "text-muted"}>
+                  {v.provenance.storage.verified ? "✓ " : ""}
+                  {v.provenance.storage.backend === "0g_storage" ? "Stored encrypted on 0G Storage" : v.provenance.storage.backend === "local_replica" ? "Stored encrypted (local replica)" : "Not stored yet"}
+                  {v.provenance.storage.read_ms !== null ? ` · read back just now in ${(v.provenance.storage.read_ms / 1000).toFixed(1)} s` : ""}
+                </p>
+                {v.provenance.storage.root ? <p className="text-xs text-muted">storage root <HashPill value={v.provenance.storage.root} /></p> : null}
+                <p className="text-xs text-muted">{v.provenance.storage.note}</p>
+                {v.provenance.drafted_by ? (
+                  <p className="text-xs text-muted">
+                    Drafted from the employee&apos;s notes by {v.provenance.drafted_by.provider === "0g_private_computer" ? "0G Private Computer" : v.provenance.drafted_by.provider} ({v.provenance.drafted_by.model}), request <span className="font-mono">{v.provenance.drafted_by.request_id.split(",")[0].trim()}</span>. The employee reviewed and signed it.
+                  </p>
+                ) : null}
+              </>
+            ) : <span className="text-muted">not reported</span>}
+          </dd>
           <dt className="text-muted">Claim digest</dt><dd><HashPill value={derived?.digest} head={10} tail={8} /></dd>
         </dl>
       </Card>

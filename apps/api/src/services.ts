@@ -82,7 +82,7 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   }
   const drafter = new ClaimDrafter(inference, mockInference, loadContract().schema("ClaimBody"), log);
   const world: WorldVerifier = o.world ?? (config.WORLD_MODE === "live" ? new LiveWorldVerifier(config.WORLD_RP_ID ?? config.WORLD_APP_ID, { environment: config.WORLD_ENVIRONMENT }) : new MockWorldVerifier());
-  const claims = new ClaimService(db, claimsRepo, org, ledger, audit, envelope, drafter, world, config, clock);
+  const claims = new ClaimService(db, claimsRepo, org, ledger, audit, envelope, drafter, world, config, clock, replicaStore, log);
   const jwt = new Jwt(config.JWT_SECRET);
 
   const baseChain: ChainClient = o.chain ?? (config.CHAIN_MODE === "live" ? new ViemChain(config) : new MockChain(db, clock));

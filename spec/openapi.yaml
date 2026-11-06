@@ -1142,6 +1142,31 @@ components:
         employee_signature: { $ref: "#/components/schemas/Signature" }
         expires_at: { $ref: "#/components/schemas/Timestamp" }
         world_action: { type: string, description: "Action string the World proof must bind to (only when auth_method=world_id)." }
+        provenance:
+          type: object
+          additionalProperties: false
+          required: [storage, drafted_by]
+          description: "Where the claim the co-signer sees came from: the sealed copy on 0G Storage (downloaded, decrypted and compared at view time) and the 0G Private Computer draft."
+          properties:
+            storage:
+              type: object
+              additionalProperties: false
+              required: [backend, root, verified, read_ms, note]
+              properties:
+                backend: { type: string, enum: [0g_storage, local_replica, none] }
+                root: { type: [string, "null"] }
+                verified: { type: boolean, description: "the copy read back from storage decrypts and matches the committed claim byte for byte" }
+                read_ms: { type: [integer, "null"] }
+                note: { type: string }
+            drafted_by:
+              type: [object, "null"]
+              additionalProperties: false
+              required: [provider, model, request_id, tee_verified]
+              properties:
+                provider: { type: string }
+                model: { type: string }
+                request_id: { type: string }
+                tee_verified: { type: [boolean, "null"] }
         ai_flags: { type: array, items: { type: string, enum: [prompt_injection_suspected, low_confidence, fields_inferred] }, description: "Same flags as Claim.ai_flags so the co-signer sees them (CR-001, spec 1.1.0)." }
     EvidenceStatus: { type: string, enum: [unverified, verified, provisional, vested, disputed, reverted, superseded, rejected, shredded] }
     EvidenceSource: { type: string, enum: [github, tickets, crm, hris, worklog, cosign, manual, dev] }

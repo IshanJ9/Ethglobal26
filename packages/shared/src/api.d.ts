@@ -1206,6 +1206,24 @@ export interface components {
             expires_at: components["schemas"]["Timestamp"];
             /** @description Action string the World proof must bind to (only when auth_method=world_id). */
             world_action?: string;
+            /** @description Where the claim the co-signer sees came from: the sealed copy on 0G Storage (downloaded, decrypted and compared at view time) and the 0G Private Computer draft. */
+            provenance?: {
+                storage: {
+                    /** @enum {string} */
+                    backend: "0g_storage" | "local_replica" | "none";
+                    root: string | null;
+                    /** @description the copy read back from storage decrypts and matches the committed claim byte for byte */
+                    verified: boolean;
+                    read_ms: number | null;
+                    note: string;
+                };
+                drafted_by: {
+                    provider: string;
+                    model: string;
+                    request_id: string;
+                    tee_verified: boolean | null;
+                } | null;
+            };
             /** @description Same flags as Claim.ai_flags so the co-signer sees them (CR-001, spec 1.1.0). */
             ai_flags?: ("prompt_injection_suspected" | "low_confidence" | "fields_inferred")[];
         };
