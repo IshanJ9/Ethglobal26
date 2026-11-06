@@ -121,7 +121,8 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
       return reply.code(fe.statusCode).send(errors.badRequest(fe.message).toBody());
     }
     req.log.error({ err: { name: fe.name, code: fe.code } }, "unhandled error");
-    return reply.code(500).send(errors.internal().toBody());
+    // request_id lets a UI bug report be matched to the server log line (no internals leaked).
+    return reply.code(500).send(errors.internal("Internal error. Quote the request_id when reporting it.", { request_id: req.id }).toBody());
   });
 
   await app.register(metaRoutes, { config });

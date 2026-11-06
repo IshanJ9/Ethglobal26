@@ -16,7 +16,8 @@
     "e2e:demo": "tsx scripts/e2e.ts",
     "e2e:chain": "tsx scripts/e2e.ts --chain",
     "zerog:probe": "tsx scripts/zerog-probe.ts",
-    "chain:probe": "tsx scripts/chain-probe.ts"
+    "chain:probe": "tsx scripts/chain-probe.ts",
+    "demo:script": "tsx scripts/demo-script.ts"
   },
   "dependencies": {
     "@0gfoundation/0g-storage-ts-sdk": "1.2.13",

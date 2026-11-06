@@ -34,6 +34,14 @@ export class ChainService {
     private readonly clock: Clock,
   ) {}
 
+  /** Chain writes run one at a time per process (no batch-id or supersede races on double clicks). */
+  private queue: Promise<unknown> = Promise.resolve();
+  private serial<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(fn, fn);
+    this.queue = run.catch(() => {});
+    return run;
+  }
+
   private now() {
     return iso(this.clock.now());
   }
@@ -61,7 +69,11 @@ export class ChainService {
     if (!isInternal(p) || !(p.role === "manager" || isHr(p))) throw errors.forbidden("Only managers or HR can trigger chain operations");
   }
 
-  async anchor(actor: string): Promise<AnchorBatch> {
+  anchor(actor: string): Promise<AnchorBatch> {
+    return this.serial(() => this.anchorNow(actor));
+  }
+
+  private async anchorNow(actor: string): Promise<AnchorBatch> {
     const items = this.repo.unanchoredEvidence();
     if (!items.length) throw errors.conflict("Nothing to anchor: all evidence is already in a batch");
     const tree = buildMerkle(items.map((i) => i.commitment as Hex));
@@ -91,7 +103,11 @@ export class ChainService {
 
   // ---------------- attest ----------------
 
-  async attest(p: Persona, scorecardId: string): Promise<AttestationRef> {
+  attest(p: Persona, scorecardId: string): Promise<AttestationRef> {
+    return this.serial(() => this.attestNow(p, scorecardId));
+  }
+
+  private async attestNow(p: Persona, scorecardId: string): Promise<AttestationRef> {
     const sc = this.scorecards.visible(p, scorecardId);
     const employee = this.org.employee(sc.employee_id)!;
     if (!canApprove(p, employee)) throw errors.forbidden("Only the employee's manager or HR can attest");
@@ -106,7 +122,7 @@ export class ChainService {
 
     // Evidence used by this scorecard must be anchored first.
     const ids = JSON.parse(sc.evidence_ids_json) as string[];
-    if (ids.some((id) => !this.evidence.get(id)?.batch_id)) await this.anchor(p.persona_id);
+    if (ids.some((id) => !this.evidence.get(id)?.batch_id)) await this.anchorNow(p.persona_id);
 
     const { subject, cycleNumeric } = this.scorecards.subjectOf(sc.employee_id, sc.cycle_id);
     const cyc = BigInt(cycleNumeric);
@@ -124,24 +140,6 @@ export class ChainService {
       multiplierBps: result.multiplier_bps,
       supersedes,
     });
-    const key = `${subject}:${cycleNumeric}`;
-
-    // First attestation for (subject, cycle): register the plan in the vault.
-    let payout = await this.chain.getPayout(subject, cyc);
-    if (payout.status === 0) {
-      const target = plan.kind === "tiered_commission" ? BigInt(result.bonus_amount) : BigInt(plan.target_bonus);
-      const reg = await this.chain.registerPlan({
-        subjectId: subject,
-        cycleId: cyc,
-        payee: getAddress(employee.wallet_address),
-        targetBonus: target,
-        holdbackBps: plan.holdback_bps,
-        maturitySeconds: BigInt(plan.maturity_days) * 86400n,
-      });
-      this.repo.setLastPayoutTx(key, reg.txHash);
-      payout = await this.chain.getPayout(subject, cyc);
-    }
-
     const at = this.now();
     const ref: AttestationRef = {
       attestation_id: Number(att.attestationId),
@@ -153,6 +151,7 @@ export class ChainService {
       explorer_url: this.explorer(att.txHash),
       attested_at: at,
     };
+    // Persist right away: if a later vault call fails, the DB still matches the chain and settle() resumes.
     this.db.transaction(() => {
       this.repo.insertAttestation({
         attestation_id: ref.attestation_id,
@@ -179,16 +178,46 @@ export class ChainService {
         multiplier_bps: result.multiplier_bps,
       });
     })();
+    await this.settle(this.scorecardsRepo.get(sc.scorecard_id)!, p.persona_id);
+    return ref;
+  }
 
-    // Re-base an already-released payout on the new attestation (ENGINE.md revision).
-    if (supersedes !== 0n && payout.attestationId === supersedes) {
+  /**
+   * Brings the vault in line with the governing attestation of this (subject, cycle): registers the plan on the
+   * first attestation and re-bases a released payout on a superseding one (ENGINE.md revision). Idempotent, so a
+   * failure here (502) is retried automatically by the next payout operation.
+   */
+  private async settle(sc: ScorecardRow, actor: string) {
+    if (sc.status !== "attested" || !sc.attestation_json) return;
+    const attId = BigInt(JSON.parse(sc.attestation_json).attestation_id);
+    const employee = this.org.employee(sc.employee_id)!;
+    const plan = this.org.plan(employee.plan_id)!;
+    const result = JSON.parse(sc.result_json) as ComputeResult;
+    const { subject, cyc, key } = this.ctx(sc);
+    let payout = await this.chain.getPayout(subject, cyc);
+    if (payout.status === 0) {
+      const reg = await this.chain.registerPlan({
+        subjectId: subject,
+        cycleId: cyc,
+        payee: getAddress(employee.wallet_address),
+        targetBonus: plan.kind === "tiered_commission" ? BigInt(result.bonus_amount) : BigInt(plan.target_bonus),
+        holdbackBps: plan.holdback_bps,
+        maturitySeconds: BigInt(plan.maturity_days) * 86400n,
+      });
+      this.repo.setLastPayoutTx(key, reg.txHash);
+      this.audit.append(this.now(), actor, "payout.plan_registered", sc.scorecard_id, { tx_hash: reg.txHash });
+      payout = await this.chain.getPayout(subject, cyc);
+    }
+    if (payout.attestationId !== 0n && payout.attestationId !== attId) {
+      const a = await this.chain.getAttestation(attId);
+      if (a.supersedes !== payout.attestationId) return;
       const before = payout;
-      const rev = await this.chain.applyRevision(supersedes, att.attestationId);
+      const rev = await this.chain.applyRevision(payout.attestationId, attId);
       this.repo.setLastPayoutTx(key, rev.txHash);
       const after = await this.chain.getPayout(subject, cyc);
-      this.audit.append(this.now(), p.persona_id, "payout.revision_applied", sc.scorecard_id, {
-        old_attestation_id: Number(supersedes),
-        new_attestation_id: ref.attestation_id,
+      this.audit.append(this.now(), actor, "payout.revision_applied", sc.scorecard_id, {
+        old_attestation_id: Number(before.attestationId),
+        new_attestation_id: Number(attId),
         new_entitlement: after.entitlement.toString(),
         held_remaining: after.held.toString(),
         forfeited: (after.forfeited - before.forfeited).toString(),
@@ -196,7 +225,6 @@ export class ChainService {
         tx_hash: rev.txHash,
       });
     }
-    return ref;
   }
 
   // ---------------- payouts ----------------
@@ -234,7 +262,11 @@ export class ChainService {
     return this.toPayout(sc, await this.chain.getPayout(subject, cyc), key);
   }
 
-  private async vaultOp(
+  private vaultOp(...args: Parameters<ChainService["vaultOpNow"]>): Promise<Payout> {
+    return this.serial(() => this.vaultOpNow(...args));
+  }
+
+  private async vaultOpNow(
     p: Persona,
     scorecardId: string,
     who: "approver" | "viewer" | "hr",
@@ -247,6 +279,8 @@ export class ChainService {
     if (who === "approver" && !canApprove(p, employee)) throw errors.forbidden("Only the employee's manager or HR can do this");
     if (who === "hr" && !isHr(p)) throw errors.forbidden("Only HR can resolve disputes");
     if (who === "viewer" && !canView(p, employee)) throw errors.notFound("Scorecard not found");
+    const gov = this.scorecardsRepo.attested(sc.employee_id, sc.cycle_id);
+    if (gov) await this.settle(gov, p.persona_id);
     const { subject, cyc, key } = this.ctx(sc);
     const before = await this.chain.getPayout(subject, cyc);
     precheck(before, sc, await this.chain.now());

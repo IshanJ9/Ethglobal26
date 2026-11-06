@@ -13,7 +13,16 @@ if (config.NODE_ENV === "production") {
   process.exit(1);
 }
 if (config.dbPath !== ":memory:") {
-  for (const f of [config.dbPath, `${config.dbPath}-wal`, `${config.dbPath}-shm`]) if (existsSync(f)) rmSync(f);
+  try {
+    for (const f of [config.dbPath, `${config.dbPath}-wal`, `${config.dbPath}-shm`]) if (existsSync(f)) rmSync(f);
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code === "EBUSY" || code === "EPERM") {
+      console.error(`Cannot delete ${config.dbPath}: it is in use. Stop the API (pnpm dev) first, then run seed:reset again.`);
+      process.exit(1);
+    }
+    throw e;
+  }
 }
 const replica = join(API_DIR, "data", "replica");
 if (existsSync(replica)) rmSync(replica, { recursive: true });
