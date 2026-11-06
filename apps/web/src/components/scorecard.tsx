@@ -3,6 +3,7 @@
 import type { Schemas } from "@/lib/api";
 import { formatBps, formatUsdc } from "@/lib/format";
 import { ChainScaleNote } from "./ChainScaleNote";
+import { EnsAddress } from "./identity";
 import { ModeBadge } from "./ModeBadge";
 import { ActorTag, Empty, HashPill, Money, StatusChip } from "./ui";
 
@@ -77,7 +78,9 @@ export function ScoreBreakdown({ result, labels }: { result: Schemas["ComputeRes
 
 const SOURCE: Record<string, string> = { github: "Git", tickets: "Tickets", crm: "CRM", hris: "HRIS", worklog: "Work log", cosign: "Co-signed", manual: "Manual", dev: "Demo" };
 
-export function EvidenceTable({ items }: { items: Schemas["EvidenceItem"][] }) {
+export function EvidenceTable({
+  items, onShred, shredding,
+}: { items: Schemas["EvidenceItem"][]; onShred?: (id: string) => void; shredding?: string | null }) {
   if (!items.length) return <Empty>No evidence attached.</Empty>;
   return (
     <div className="overflow-x-auto">
@@ -89,6 +92,7 @@ export function EvidenceTable({ items }: { items: Schemas["EvidenceItem"][] }) {
             <th className="py-2 pr-3 font-medium">Status</th>
             <th className="py-2 pr-3 font-medium">Commitment</th>
             <th className="py-2 font-medium">Anchored</th>
+            {onShred ? <th className="py-2 font-medium" /> : null}
           </tr>
         </thead>
         <tbody>
@@ -113,6 +117,23 @@ export function EvidenceTable({ items }: { items: Schemas["EvidenceItem"][] }) {
                   <span className="text-muted">not yet</span>
                 )}
               </td>
+              {onShred ? (
+                <td className="py-2 text-right text-xs">
+                  {e.status === "shredded" ? (
+                    <span className="text-muted">erased</span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Erase this record's content? Its hash and proof stay verifiable, but the data cannot be recovered.")) onShred(e.evidence_id);
+                      }}
+                      disabled={!!shredding}
+                      className="rounded border border-danger/40 px-2 py-0.5 text-danger hover:bg-danger/10 disabled:opacity-50"
+                    >
+                      {shredding === e.evidence_id ? "Erasing…" : "Shred"}
+                    </button>
+                  )}
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>
@@ -179,7 +200,7 @@ export function PayoutPanel({ payout, chainMode }: { payout: Schemas["Payout"]; 
         <div><dt className="text-xs uppercase text-muted">Overpaid</dt><dd><Money amount={payout.overpaid} /></dd></div>
       </dl>
       <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-        <span>Payee <HashPill value={payout.payee} /></span>
+        <span>Payee <EnsAddress address={payout.payee} /></span>
         {payout.maturity_at ? <span>Holdback matures {new Date(payout.maturity_at).toLocaleDateString()}</span> : null}
         {payout.last_tx_hash ? <span>Last tx <HashPill value={payout.last_tx_hash} href={payout.explorer_url} /></span> : null}
         <ModeBadge mode={chainMode} />

@@ -37,7 +37,9 @@ const middleware: Middleware = {
 };
 
 /** The single typed HTTP client. All API calls go through this. */
-export const api = createClient<paths>({ baseUrl: API_BASE });
+// Never use the browser HTTP cache: every response is live and per caller, and some routes key on a header
+// (X-Cosign-Token) rather than the URL, so a cached 410 for one co-sign link was served for the next link.
+export const api = createClient<paths>({ baseUrl: API_BASE, fetch: (req: Request) => fetch(req, { cache: "no-store" }) });
 api.use(middleware);
 
 export class ApiError extends Error {

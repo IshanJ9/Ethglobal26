@@ -9,6 +9,8 @@ import { isManager, useRequireSession, useSignOutOnUnauthorized } from "@/lib/au
 import { formatBps } from "@/lib/format";
 import { useCurrentCycle, useEmployees, useScorecards } from "@/lib/queries";
 import { Button, Card, Empty, ErrorNote, Loading, Money, PageTitle, StatusChip } from "@/components/ui";
+import { PersonName } from "@/components/identity";
+import { RunTrace } from "@/components/RunTrace";
 
 function Row({ emp, cards, cycleId }: { emp: Schemas["Employee"]; cards: Schemas["Scorecard"][]; cycleId: string }) {
   const router = useRouter();
@@ -19,16 +21,18 @@ function Row({ emp, cards, cycleId }: { emp: Schemas["Employee"]; cards: Schemas
     (_: string, key) => unwrap(api.POST("/v1/runs", { body: { employee_id: emp.employee_id, cycle_id: cycleId }, ...idem(key) })),
     { onSuccess: () => qc.invalidateQueries({ queryKey: ["evidence"] }) },
   );
+  const runId = collect.data?.run_id;
   const create = useAction(
     (_: string, key) => unwrap(api.POST("/v1/scorecards", { body: { employee_id: emp.employee_id, cycle_id: cycleId }, ...idem(key) })),
     { onSuccess: (sc) => router.push(`/scorecards/${sc.scorecard_id}`) },
   );
 
   return (
+    <>
     <tr className="border-b border-line/60 align-middle">
       <td className="py-2.5 pr-3">
-        <div className="font-medium">{emp.display_name}</div>
-        <div className="text-xs text-muted">{emp.level.replace(/_/g, " ")} · {emp.ens_name ?? "ENS not resolved"}</div>
+        <PersonName name={emp.display_name} address={emp.wallet_address} ens={emp.ens_name} />
+        <div className="text-xs text-muted">{emp.level.replace(/_/g, " ")}</div>
       </td>
       <td className="py-2.5 pr-3 text-right tabular-nums">{latest ? formatBps(latest.result.score_bps) : "-"}</td>
       <td className="py-2.5 pr-3 text-right tabular-nums">{latest ? formatBps(latest.result.multiplier_bps) : "-"}</td>
@@ -59,6 +63,14 @@ function Row({ emp, cards, cycleId }: { emp: Schemas["Employee"]; cards: Schemas
         <ErrorNote error={collect.error ?? create.error} className="mt-1 text-left" />
       </td>
     </tr>
+    {runId ? (
+      <tr>
+        <td colSpan={6} className="pb-3">
+          <RunTrace runId={runId} />
+        </td>
+      </tr>
+    ) : null}
+    </>
   );
 }
 

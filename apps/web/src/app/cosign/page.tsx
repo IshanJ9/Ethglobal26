@@ -94,7 +94,12 @@ export default function CosignPage() {
       }
       const world_result =
         v.auth_method === "world_id" && cfg
-          ? await requestWorldProof(cfg.world_mode, { action: v.world_action ?? "pw-cosign-claim", signal: derived.digest })
+          ? await requestWorldProof(cfg.world_mode, {
+              action: v.world_action ?? "pw-cosign-claim",
+              signal: derived.digest,
+              appId: cfg.world_app_id,
+              rpContext: (v as { world_rp_context?: unknown }).world_rp_context, // CR-002, when the API serves it
+            })
           : undefined;
       return unwrap(api.POST("/v1/cosign/sign", { body: { signature, world_result }, headers: { "X-Cosign-Token": token!, ...idem(key).headers } }));
     },

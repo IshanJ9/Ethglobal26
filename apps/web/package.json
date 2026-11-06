@@ -14,6 +14,8 @@
     "@proofwork/crypto": "workspace:*",
     "@proofwork/shared": "workspace:*",
     "@tanstack/react-query": "5.62.11",
+    "@worldcoin/idkit": "4.6.0",
+    "@worldcoin/idkit-core": "4.6.0",
     "next": "15.1.6",
     "openapi-fetch": "0.13.4",
     "react": "19.0.0",

@@ -31,8 +31,13 @@ export function AppHeader() {
                 <Link href="/" className="text-muted hover:text-ink">My cycle</Link>
                 <Link href="/claims/new" className="text-muted hover:text-ink">New claim</Link>
                 {session.persona.role === "manager" || session.persona.role === "hr" ? (
-                  <Link href="/team" className="text-muted hover:text-ink">Team</Link>
+                  <>
+                    <Link href="/team" className="text-muted hover:text-ink">Team</Link>
+                    <Link href="/org/plans" className="text-muted hover:text-ink">Plans</Link>
+                  </>
                 ) : null}
+                {session.persona.role === "hr" ? <Link href="/audit" className="text-muted hover:text-ink">Audit</Link> : null}
+                <Link href="/privacy" className="text-muted hover:text-ink">Privacy</Link>
                 <Link href="/verify" className="text-muted hover:text-ink">Verify</Link>
                 <Link href="/demo" className="text-muted hover:text-ink">Demo</Link>
               </nav>

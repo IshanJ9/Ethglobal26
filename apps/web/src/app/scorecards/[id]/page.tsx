@@ -55,6 +55,19 @@ export default function ScorecardPage() {
     (scorecard_id: string, key) => unwrap(api.POST("/v1/payouts/{scorecard_id}/release-holdback", { params: { path: { scorecard_id } }, ...idem(key) })),
     { onSuccess: refresh },
   );
+  const shred = useAction(
+    (evidence_id: string, key) => unwrap(api.POST("/v1/evidence/{evidence_id}/shred", { params: { path: { evidence_id } }, ...idem(key) })),
+    { onSuccess: () => qc.invalidateQueries({ queryKey: ["evidence"] }) },
+  );
+  const [disputeReason, setDisputeReason] = useState("");
+  const dispute = useAction(
+    (r: string, key) => unwrap(api.POST("/v1/payouts/{scorecard_id}/dispute", { params: { path: { scorecard_id: id } }, body: { reason: r }, ...idem(key) })),
+    { onSuccess: () => { setDisputeReason(""); refresh(); } },
+  );
+  const resolve = useAction(
+    (release_funds: boolean, key) => unwrap(api.POST("/v1/payouts/{scorecard_id}/resolve", { params: { path: { scorecard_id: id } }, body: { release_funds }, ...idem(key) })),
+    { onSuccess: refresh },
+  );
   const [reason, setReason] = useState("PR #101 reverted (regression)");
   const revise = useAction(
     (r: string, key) => unwrap(api.POST("/v1/scorecards/{scorecard_id}/revise", { params: { path: { scorecard_id: id } }, body: { reason: r }, ...idem(key) })),
@@ -73,7 +86,8 @@ export default function ScorecardPage() {
   const chainMode = cfg?.chain_mode ?? "mock";
   const noPayout = payout.error instanceof ApiError && payout.error.status === 404;
   const p = payout.data;
-  const actionError = requestApproval.error ?? attest.error ?? release.error ?? releaseHoldback.error ?? revise.error;
+  const actionError = requestApproval.error ?? attest.error ?? release.error ?? releaseHoldback.error ?? revise.error ?? dispute.error ?? resolve.error;
+  const isHr = me.role === "hr";
 
   return (
     <div className="flex flex-col gap-6">
@@ -152,6 +166,23 @@ export default function ScorecardPage() {
               )}
             </li>
           </ol>
+          {canAct && p?.status === "active" ? (
+            <form
+              className="flex flex-wrap items-center gap-2 text-sm"
+              onSubmit={(e) => { e.preventDefault(); if (disputeReason.trim()) dispute.mutate(disputeReason.trim()); }}
+            >
+              <span className="text-muted">Hold the remaining {p ? <Money amount={p.held} /> : null} while a problem is checked:</span>
+              <input value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)} placeholder="Reason" className="w-56 rounded border border-line px-2 py-1" aria-label="Dispute reason" />
+              <Button kind="danger" type="submit" disabled={!disputeReason.trim() || dispute.isPending}>Dispute</Button>
+            </form>
+          ) : null}
+          {canAct && p?.status === "disputed" ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-muted">Resolve the dispute:</span>
+              <Button onClick={() => resolve.mutate(true)} disabled={resolve.isPending}>Release held amount</Button>
+              <Button kind="danger" onClick={() => resolve.mutate(false)} disabled={resolve.isPending}>Forfeit held amount</Button>
+            </div>
+          ) : null}
           <ErrorNote error={actionError} />
           {p ? <PayoutPanel payout={p} chainMode={chainMode} /> : null}
           {s.score_commitment ? (
@@ -164,7 +195,13 @@ export default function ScorecardPage() {
       </Card>
 
       <Card title={`Evidence (${evItems.length})`}>
-        {evidence.isLoading ? <Loading /> : <EvidenceTable items={evItems} />}
+        {evidence.isLoading ? (
+          <Loading />
+        ) : (
+          <EvidenceTable items={evItems} onShred={isHr ? (eid) => shred.mutate(eid) : undefined} shredding={shred.isPending ? shred.variables : null} />
+        )}
+        <ErrorNote error={shred.error} className="mt-2" />
+        {isHr ? <p className="mt-2 text-xs text-muted">Shredding erases a record&apos;s content on request (right to erasure). Its commitment and Merkle proof stay valid, so past scores remain verifiable.</p> : null}
       </Card>
     </div>
   );

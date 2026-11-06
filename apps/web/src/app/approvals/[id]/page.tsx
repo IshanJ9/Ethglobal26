@@ -34,7 +34,12 @@ export default function ApprovalPage() {
   const verify = useAction(
     async () => {
       if (!a) throw new Error("No approval");
-      return requestWorldProof(worldMode, { action: a.world_action ?? "pw-approve-scorecard", signal: a.challenge });
+      return requestWorldProof(worldMode, {
+        action: a.world_action ?? "pw-approve-scorecard",
+        signal: a.challenge,
+        appId: cfg?.world_app_id,
+        rpContext: (a as { world_rp_context?: unknown }).world_rp_context, // CR-002, when the API serves it
+      });
     },
     { onSuccess: setWorld },
   );
