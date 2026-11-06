@@ -1,6 +1,7 @@
 "use client";
 
 import { usePublicConfig } from "@/lib/config";
+import { ChainScaleNote } from "./ChainScaleNote";
 import { ModeBadge } from "./ModeBadge";
 
 type Actor = "ai" | "code" | "human" | "chain";
@@ -28,6 +29,7 @@ export function ProvenanceStrip() {
   ];
 
   return (
+    <div>
     <ol
       aria-label="How Proofwork reaches a decision"
       className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line md:grid-cols-4"
@@ -48,5 +50,9 @@ export function ProvenanceStrip() {
         </li>
       ))}
     </ol>
+    <div className="mt-1 flex justify-end">
+      <ChainScaleNote />
+    </div>
+    </div>
   );
 }

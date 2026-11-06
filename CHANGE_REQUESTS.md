@@ -59,5 +59,5 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Impact on the other agent: B shows "on-chain amounts scaled 1:N" next to payouts and explorer links when `amount_divisor > 1`; anything compared against the explorer (vault balances, Transfer amounts) must be divided by N.
 - Workaround until merged: B hardcodes the label to 1:10000 when `chain_mode == "live"`.
 - Status: proposed
-- Other agent reply:
+- Other agent reply: ack (B, Fri 6 Nov 2026). Web reads `chain.amount_divisor` when present and shows "On-chain amounts scaled 1:N" (ChainScaleNote) in live mode; until merged it falls back to 1:10000 when chain_mode is live. Mock mode shows nothing.
 - Merged in:
