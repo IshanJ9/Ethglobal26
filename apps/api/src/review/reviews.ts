@@ -1,3 +1,4 @@
+import type { EnsCredentials } from "../ens/credentials.ts";
 // CR-004: a three-layer review (layer 1 KRA score in the cluster, layer 2 context, layer 3 0G reasoning),
 // stored with every hash needed to prove what it was built from, and anchorable on chain.
 import { canonicalJson, keccakUtf8, type Hex } from "@proofwork/crypto";
@@ -44,6 +45,8 @@ export class ReviewService {
     private readonly log: (m: string, d?: Record<string, unknown>) => void = () => {},
     /** Shared chain-write lock (ChainService.exclusive): one sender, no batch-id or nonce races. */
     private readonly exclusive: <T>(fn: () => Promise<T>) => Promise<T> = (fn) => fn(),
+    /** ENS review credentials (expiring, non-transferable subname per anchored review). Optional. */
+    private readonly credentials: EnsCredentials | null = null,
   ) {}
 
   private canCreate(viewer: Persona, e: Employee) {
@@ -347,6 +350,18 @@ export class ReviewService {
     };
     this.db.prepare("UPDATE reviews SET anchor_json = ? WHERE review_id = ?").run(JSON.stringify(anchor), id);
     this.audit.append(anchor.anchored_at, viewer.persona_id, "review.anchored", id, { review_hash: review.hashes.review_hash, numeric_batch_id: numeric, tx_hash: txHash, chain_mode: this.chain.mode });
+    this.issueCredential(viewer, review, txHash);
     return { ...review, anchor };
+  }
+
+  /** Background: register r-<hash8>.<parent> to the employee (ENS). Never blocks or fails the anchor. */
+  private issueCredential(viewer: Persona, review: Review, txHash: string) {
+    if (!this.credentials?.enabled || this.chain.mode !== "live") return;
+    const emp = this.org.employee(review.employee_id);
+    if (!emp) return;
+    this.credentials
+      .issue({ reviewHash: review.hashes.review_hash as Hex, anchorTx: txHash, chainId: this.config.CHAIN_ID, owner: emp.wallet_address as Hex, employeeEns: emp.ens_name ?? null, cluster: review.cluster.cluster_id })
+      .then((r) => r && this.audit.append(iso(this.clock.now()), viewer.persona_id, "review.credential_issued", review.review_id, r))
+      .catch((e) => this.log(`ENS review credential failed for ${review.review_id}: ${e instanceof Error ? e.message.split(String.fromCharCode(10))[0] : e}`));
   }
 }

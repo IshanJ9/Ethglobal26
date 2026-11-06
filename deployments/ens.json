@@ -156,7 +156,7 @@
         "description": "Writes bonus-review reasoning inside 0G Private Computer from the encrypted evidence vault. Every number it writes is checked against the data packet.",
         "model": "0gm-1.0-35b-a3b",
         "provider": "0G Private Computer (TeeML)",
-        "prompt": "0x63fd5668e4bb9f30d95c1f677a7d0d75ee45082e8c666e0ad8d02cdcb419e140",
+        "prompt": "0xf94a10cfc69c606378f2b808a9a05a0eed285358a30a390af449c027b671e122",
         "rules": "numbers-from-packet-only; same-cluster-only; one-retry-then-labelled-fallback"
       }
     },

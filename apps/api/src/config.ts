@@ -63,6 +63,11 @@ const schema = z.object({
   ZEROG_STORAGE_INDEXER: optStr,
   ZEROG_PRIVATE_KEY: optStr,
   ZK_VERIFIER_ADDRESS: optStr,
+  ENS_ISSUER_PRIVATE_KEY: optStr,
+  REVIEW_AGENT_PRIVATE_KEY: optStr,
+  ENS_SUBREGISTRY: optStr,
+  ENS_ORG_RESOLVER: optStr,
+  ENS_REVIEW_AGENT_RESOLVER: optStr,
 
   ENS_NETWORK: z.enum(["none", "sepolia", "mainnet"]).default("none"),
   ENS_PARENT_NAME: optStr,

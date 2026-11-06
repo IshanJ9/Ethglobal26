@@ -27,6 +27,9 @@ import { buildPublicConfig } from "./routes/meta.ts";
 import { defaultReplicaDir, makeReplicaStore, ReplicaService, type ReplicaStore } from "./replica/replica.ts";
 import { API_DIR } from "./config.ts";
 import { EnsDirectory } from "./ens/directory.ts";
+import { EnsCredentials } from "./ens/credentials.ts";
+import { SYSTEM_PROMPT } from "./review/reasoning.ts";
+import { keccak256, stringToBytes } from "viem";
 import { EnsResolver, type EnsLookup } from "./ens/resolver.ts";
 import { ClusterService } from "./review/clusters.ts";
 import { ContextService } from "./review/context.ts";
@@ -98,7 +101,11 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   if (o.reasoner === undefined && config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL) {
     reasoner = new ZeroGReasoner(config.ZEROG_BASE_URL, config.ZEROG_API_KEY, config.ZEROG_MODEL, clock);
   }
-  const reviews = new ReviewService(db, org, evidence, clusters, contextSvc, vault, reasoner, chain, world, audit, config, clock, log, (fn) => chainSvc.exclusive(fn));
+  const credentials = new EnsCredentials(config, log);
+  if (o.ens === undefined && config.ENS_NETWORK === "sepolia") {
+    credentials.publishAgentPrompt(keccak256(stringToBytes(SYSTEM_PROMPT))).catch((e) => log(`review-agent prompt publish failed: ${e instanceof Error ? e.message.split(String.fromCharCode(10))[0] : e}`));
+  }
+  const reviews = new ReviewService(db, org, evidence, clusters, contextSvc, vault, reasoner, chain, world, audit, config, clock, log, (fn) => chainSvc.exclusive(fn), credentials);
 
   const zk = new ZkService(db, scorecards, org, envelope, chain, audit, config, clock, (fn) => chainSvc.exclusive(fn));
 

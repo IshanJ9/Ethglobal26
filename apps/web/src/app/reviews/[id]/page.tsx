@@ -11,6 +11,7 @@ import { usePublicConfig } from "@/lib/config";
 import { requestWorldProof } from "@/lib/world";
 import { useEnsText } from "@/lib/ens";
 import { ActorTag, Button, Card, ErrorNote, HashPill, Loading, PageTitle, Stat, StatusChip, TextLink } from "@/components/ui";
+import { ReviewCredential } from "@/components/ReviewCredential";
 import { DistStrip, LayerHeader, SignalChips, SourceBadge, pctPpm, zText } from "@/components/review";
 
 const READINESS = { ready: "Ready for promotion", on_track: "On track", not_yet: "Not yet" } as const;
@@ -322,6 +323,7 @@ export default function ReviewPage() {
             ) : (
               <p className="text-muted">Not acknowledged yet. {r.display_name} confirms it from their own login with World ID.</p>
             )}
+            <ReviewCredential reviewHash={r.hashes.review_hash} employeeId={r.employee_id} isHr={isHr} anchored={!!r.anchor && r.anchor.chain_mode === "live"} />
             <p className="text-xs text-muted">Prepared by {r.created_by} on {new Date(r.created_at).toLocaleString()}. <TextLink href={`/clusters?c=${r.cluster.cluster_id}`}>Open the cluster</TextLink></p>
           </div>
         </div>
