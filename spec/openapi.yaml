@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Proofwork API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     FROZEN CONTRACT between Agent A (implements) and Agent B (consumes). Changes only via CHANGE_REQUESTS.md.
     Conventions (apply everywhere):
@@ -1245,6 +1245,7 @@ components:
             name: { type: string }
             rpc_url: { type: [string, "null"] }
             explorer_base_url: { type: [string, "null"] }
+            amount_divisor: { type: integer, minimum: 1, description: "On-chain amounts are the API amounts divided by this (testnet funding; CR-003, spec 1.2.0). 1 or absent = unscaled." }
         contracts:
           type: object
           additionalProperties: false

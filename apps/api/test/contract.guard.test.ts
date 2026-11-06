@@ -31,6 +31,16 @@ describe("meta routes", () => {
     expect(app.contractGuard.violations).toEqual([]);
   });
 
+  it("PublicConfig serves chain.amount_divisor only when on-chain amounts are scaled (CR-003)", async () => {
+    const plain = (await (await testApp()).inject({ method: "GET", url: "/v1/config/public" })).json();
+    expect(plain.chain).not.toHaveProperty("amount_divisor");
+    const app = await testApp({ CHAIN_AMOUNT_DIVISOR: "10000" });
+    const res = await app.inject({ method: "GET", url: "/v1/config/public" });
+    expect(res.json().chain.amount_divisor).toBe(10000);
+    expect(loadContract().schema("PublicConfig")(res.json())).toBe(true);
+    expect(app.contractGuard.violations).toEqual([]);
+  });
+
   it("unknown route -> 404 Error shape", async () => {
     const app = await testApp();
     const res = await app.inject({ method: "GET", url: "/v1/nope" });

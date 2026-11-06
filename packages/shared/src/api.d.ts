@@ -1268,6 +1268,8 @@ export interface components {
                 name: string;
                 rpc_url?: string | null;
                 explorer_base_url?: string | null;
+                /** @description On-chain amounts are the API amounts divided by this (testnet funding; CR-003, spec 1.2.0). 1 or absent = unscaled. */
+                amount_divisor?: number;
             };
             contracts: {
                 registry: components["schemas"]["Address"];

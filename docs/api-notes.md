@@ -1,7 +1,7 @@
 # API notes (`apps/api`, Agent A)
 
 What the backend does, what is real and what is mocked, how to run and check it, and its known limits.
-Spec version **1.1.0** (1.0.0 + CR-001). Last updated Fri 6 Nov 2026 (IST).
+Spec version **1.2.0** (1.0.0 + CR-001, CR-003). Last updated Fri 6 Nov 2026 (IST).
 
 > **Agents collect, code computes, humans decide, chain proves.** No model output is ever a number in a score;
 > no scorecard is attested without an approved human approval; nothing is paid without an attestation.
@@ -51,7 +51,7 @@ Optional variables the API also reads (all have defaults; not in the frozen `.en
 | Command | Proves |
 |---|---|
 | `pnpm spec:check` | spec, fixtures, vectors (JS + Python + TS crypto), ABIs, generated types are consistent |
-| `pnpm --filter @proofwork/api test` | 106 tests: engine vs vectors and seed expectations, contract guard, claims F1, approvals, chain behaviour, verify, negative tests n01-n18, resilience |
+| `pnpm --filter @proofwork/api test` | 107 tests: engine vs vectors and seed expectations, contract guard, claims F1, approvals, chain behaviour, verify, negative tests n01-n18, resilience |
 | `pnpm e2e:demo` | full story s1 -> c1 -> v1 attest/release -> deny path -> s3 revert -> v2 + applyRevision -> s4 carry-forward -> shred, every number checked against the fixtures (in-process, ~1-2 s). `E2E_BASE_URL=http://localhost:8787` runs it against a server |
 | `pnpm --filter @proofwork/api demo:script [--live]` | prints the exact click order, ids and expected numbers for the demo video |
 | `pnpm --filter @proofwork/api chain:probe` | (live) chain id, roles granted to our two keys, asset decimals, cycle balances, gas |
@@ -102,7 +102,7 @@ Optional variables the API also reads (all have defaults; not in the frozen `.en
 |---|---|---|
 | CR-001 | optional `ai_flags` on `CosignView` | **merged** (no reply within 30 min = ack); spec 1.1.0; the co-signer view now returns the flags |
 | CR-002 | optional `world_rp_context` on `Approval` and `CosignView` (World ID 4.0 RP signatures, U1) | acked by B; merge waits for the U1 answer (signing algorithm) |
-| CR-003 | optional `PublicConfig.chain.amount_divisor` (on-chain amounts scaled for testnet funding) | proposed |
+| CR-003 | optional `PublicConfig.chain.amount_divisor` (on-chain amounts scaled for testnet funding) | **merged** (acked by B); spec 1.2.0; served when `CHAIN_AMOUNT_DIVISOR > 1`, the web shows "On-chain amounts scaled 1:N" |
 
 Spec build on Windows: run the vector generator as `python -I -X utf8 spec/vectors/generate.py` (needs `eth-account`, `pyyaml`); without `-X utf8` Python writes cp1252 and truncates `vectors.json`.
 

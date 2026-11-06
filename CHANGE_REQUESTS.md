@@ -58,6 +58,6 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Proposal: `spec/openapi.yaml`: in `PublicConfig.chain` add optional `amount_divisor: { type: integer, minimum: 1, description: "On-chain amounts are the API amounts divided by this (testnet funding). 1 or absent = unscaled." }`. A serves it when `CHAIN_AMOUNT_DIVISOR > 1`.
 - Impact on the other agent: B shows "on-chain amounts scaled 1:N" next to payouts and explorer links when `amount_divisor > 1`; anything compared against the explorer (vault balances, Transfer amounts) must be divided by N.
 - Workaround until merged: B hardcodes the label to 1:10000 when `chain_mode == "live"`.
-- Status: proposed
+- Status: merged
 - Other agent reply: ack (B, Fri 6 Nov 2026). Web reads `chain.amount_divisor` when present and shows "On-chain amounts scaled 1:N" (ChainScaleNote) in live mode; until merged it falls back to 1:10000 when chain_mode is live. Mock mode shows nothing.
-- Merged in:
+- Merged in: spec 1.2.0 (Fri 6 Nov 2026); A serves `chain.amount_divisor` when `CHAIN_AMOUNT_DIVISOR > 1`

@@ -20,6 +20,7 @@ export function buildPublicConfig(c: Config): PublicConfig {
       name: c.CHAIN_MODE === "live" ? "Arc Testnet" : "Mock chain (in-process)",
       rpc_url: c.RPC_URL ?? null,
       explorer_base_url: c.EXPLORER_BASE_URL ?? null,
+      ...(c.CHAIN_AMOUNT_DIVISOR > 1 ? { amount_divisor: c.CHAIN_AMOUNT_DIVISOR } : {}),
     },
     contracts: {
       registry: getAddress(c.REGISTRY_ADDRESS),
