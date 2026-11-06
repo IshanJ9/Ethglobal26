@@ -9,6 +9,8 @@ import { registerContractGuard } from "./contract/guard.ts";
 import { metaRoutes } from "./routes/meta.ts";
 import { coreRoutes } from "./routes/core.ts";
 import { claimRoutes } from "./routes/claims.ts";
+import { flowRoutes } from "./routes/flow.ts";
+import { ChainRevert } from "./chain/types.ts";
 import { buildServices, type ServiceOverrides, type Services } from "./services.ts";
 
 declare module "fastify" {
@@ -70,6 +72,10 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
       if (err.status >= 500) req.log.error({ code: err.code }, err.message);
       return reply.code(err.status).send(err.toBody());
     }
+    if (err instanceof ChainRevert) {
+      req.log.warn({ op: err.op, revert: err.revert }, "chain call failed");
+      return reply.code(502).send(new ApiError(502, "chain_error", "The chain rejected the transaction", { op: err.op, revert: err.revert }).toBody());
+    }
     const fe = err as FastifyError;
     if (fe.code === "FST_ERR_CTP_BODY_TOO_LARGE") {
       return reply.code(413).send(errors.badRequest(`Body exceeds ${BODY_LIMIT} bytes`).toBody());
@@ -96,5 +102,6 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
   await app.register(metaRoutes, { config });
   await app.register(coreRoutes, { svc });
   await app.register(claimRoutes, { svc });
+  await app.register(flowRoutes, { svc });
   return app;
 }

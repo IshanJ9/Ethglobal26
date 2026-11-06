@@ -180,6 +180,21 @@ export class Ledger {
     this.audit.append(iso(this.clock.now()), actor, "evidence.status_changed", evidenceId, { from: r.status, to: status, reason });
   }
 
+  /** HR erasure (F5). Designed for erasure via crypto-shredding; verification of the leaf still works. */
+  shred(evidenceId: string, actor: string): EvidenceItem {
+    const r = this.repo.get(evidenceId);
+    if (!r) throw errors.notFound("Evidence not found");
+    if (r.status !== "shredded") {
+      const at = iso(this.clock.now());
+      this.db.transaction(() => {
+        this.repo.shred(evidenceId, at);
+        const flagged = this.repo.flagScorecardsUsing(evidenceId);
+        this.audit.append(at, actor, "evidence.shredded", evidenceId, { from_status: r.status, commitment: r.commitment, scorecards_needing_revision: flagged });
+      })();
+    }
+    return toEvidenceItem(this.repo.get(evidenceId)!);
+  }
+
   get(id: string): EvidenceItem | undefined {
     const r = this.repo.get(id);
     return r ? toEvidenceItem(r) : undefined;

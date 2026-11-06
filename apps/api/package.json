@@ -11,8 +11,8 @@
     "test": "vitest run",
     "keys:gen": "tsx scripts/gen-keys.ts",
     "seed:reset": "tsx scripts/seed-reset.ts",
-    "e2e:demo": "node -e \"console.error('e2e:demo arrives in Block 2');process.exit(1)\"",
-    "e2e:chain": "node -e \"console.error('e2e:chain arrives in Block 2');process.exit(1)\""
+    "e2e:demo": "tsx scripts/e2e.ts",
+    "e2e:chain": "tsx scripts/e2e.ts --chain"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.1",
