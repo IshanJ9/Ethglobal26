@@ -1,3 +1,4 @@
+import { SPEC_VERSION } from "../src/config.ts";
 import { mkdtempSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -50,7 +51,7 @@ describe("rate limits", () => {
     for (let i = 0; i < 7; i++) last = await app.inject({ method: "GET", url: "/healthz" });
     expect(last.statusCode).toBe(429);
     expect(last.json().error.code).toBe("rate_limited");
-    expect(last.headers["x-spec-version"]).toBe("1.0.0");
+    expect(last.headers["x-spec-version"]).toBe(SPEC_VERSION);
   });
 });
 

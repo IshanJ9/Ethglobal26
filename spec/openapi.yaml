@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Proofwork API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     FROZEN CONTRACT between Agent A (implements) and Agent B (consumes). Changes only via CHANGE_REQUESTS.md.
     Conventions (apply everywhere):
@@ -923,6 +923,7 @@ components:
         employee_signature: { $ref: "#/components/schemas/Signature" }
         expires_at: { $ref: "#/components/schemas/Timestamp" }
         world_action: { type: string, description: "Action string the World proof must bind to (only when auth_method=world_id)." }
+        ai_flags: { type: array, items: { type: string, enum: [prompt_injection_suspected, low_confidence, fields_inferred] }, description: "Same flags as Claim.ai_flags so the co-signer sees them (CR-001, spec 1.1.0)." }
     EvidenceStatus: { type: string, enum: [unverified, verified, provisional, vested, disputed, reverted, superseded, rejected, shredded] }
     EvidenceSource: { type: string, enum: [github, tickets, crm, hris, worklog, cosign, manual, dev] }
     Observation:

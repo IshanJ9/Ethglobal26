@@ -1,3 +1,4 @@
+import { SPEC_VERSION } from "../src/config.ts";
 import { describe, expect, it } from "vitest";
 import { loadContract } from "../src/contract/openapi.ts";
 import { expectNoViolations, login, testApp } from "./helpers.ts";
@@ -7,8 +8,8 @@ describe("meta routes", () => {
     const app = await testApp();
     const res = await app.inject({ method: "GET", url: "/healthz" });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ ok: true, spec_version: "1.0.0" });
-    expect(res.headers["x-spec-version"]).toBe("1.0.0");
+    expect(res.json()).toEqual({ ok: true, spec_version: SPEC_VERSION });
+    expect(res.headers["x-spec-version"]).toBe(SPEC_VERSION);
     expect(app.contractGuard.violations).toEqual([]);
   });
 
@@ -35,7 +36,7 @@ describe("meta routes", () => {
     const res = await app.inject({ method: "GET", url: "/v1/nope" });
     expect(res.statusCode).toBe(404);
     expect(res.json().error.code).toBe("not_found");
-    expect(res.headers["x-spec-version"]).toBe("1.0.0");
+    expect(res.headers["x-spec-version"]).toBe(SPEC_VERSION);
   });
 });
 

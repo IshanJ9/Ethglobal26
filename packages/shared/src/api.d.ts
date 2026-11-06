@@ -985,6 +985,8 @@ export interface components {
             expires_at: components["schemas"]["Timestamp"];
             /** @description Action string the World proof must bind to (only when auth_method=world_id). */
             world_action?: string;
+            /** @description Same flags as Claim.ai_flags so the co-signer sees them (CR-001, spec 1.1.0). */
+            ai_flags?: ("prompt_injection_suspected" | "low_confidence" | "fields_inferred")[];
         };
         /** @enum {string} */
         EvidenceStatus: "unverified" | "verified" | "provisional" | "vested" | "disputed" | "reverted" | "superseded" | "rejected" | "shredded";

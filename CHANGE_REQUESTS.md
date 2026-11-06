@@ -36,9 +36,9 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Proposal: `spec/openapi.yaml` `CosignView.properties.ai_flags`: same schema as `Claim.ai_flags` (array of enum `prompt_injection_suspected | low_confidence | fields_inferred`), optional.
 - Impact on the other agent: none required; B may render the flags on `/cosign` once merged.
 - Workaround until merged: flags are on `Claim` (visible to the employee and their manager); the co-signer page cannot show them yet.
-- Status: proposed
-- Other agent reply:
-- Merged in:
+- Status: merged
+- Other agent reply: none within 30 min of working time -> ack by timeout (INTEGRATION 2.1)
+- Merged in: commit "spec 1.1.0: merge CR-001", spec VERSION 1.1.0 (minor: additive). B: pull, nothing required; `CosignView.ai_flags` is now available to render on /cosign.
 
 ### CR-002  Optional World RP context on Approval and CosignView (U1 trigger)
 - Proposer: A        Date/time (IST): Fri 6 Nov 2026

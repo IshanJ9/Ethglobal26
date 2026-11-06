@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-export const SPEC_VERSION = "1.0.0";
+export const SPEC_VERSION = "1.1.0";
 
 /** apps/api directory and monorepo root, independent of the process cwd. */
 export const API_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -22,7 +22,7 @@ const mode = z.enum(["mock", "live"]).default("mock");
 
 const schema = z.object({
   NODE_ENV: z.string().default("development"),
-  SPEC_VERSION: z.literal(SPEC_VERSION).default(SPEC_VERSION),
+  SPEC_VERSION: z.string().optional(),
   PORT: z.coerce.number().int().positive().default(8787),
   HOST: z.string().default("0.0.0.0"),
   WEB_ORIGIN: z.string().default("http://localhost:3000"),
@@ -101,6 +101,9 @@ export function parseConfig(env: NodeJS.ProcessEnv = process.env): Config {
     throw new Error(`Invalid configuration (see .env.example):\n${issues}`);
   }
   const c = res.data;
+  if (c.SPEC_VERSION && c.SPEC_VERSION !== SPEC_VERSION) {
+    console.warn(`[proofwork] SPEC_VERSION=${c.SPEC_VERSION} in the environment; this build implements spec ${SPEC_VERSION} (the build wins).`);
+  }
   if (c.CHAIN_MODE === "live") {
     const missing = (["RPC_URL", "ANCHOR_PRIVATE_KEY", "PAYOUT_PRIVATE_KEY"] as const).filter((k) => !c[k]);
     if (missing.length) throw new Error(`CHAIN_MODE=live requires: ${missing.join(", ")}`);

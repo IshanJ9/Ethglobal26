@@ -1,7 +1,7 @@
 # API notes (`apps/api`, Agent A)
 
 What the backend does, what is real and what is mocked, how to run and check it, and its known limits.
-Spec version **1.0.0**. Last updated Fri 6 Nov 2026 (IST).
+Spec version **1.1.0** (1.0.0 + CR-001). Last updated Fri 6 Nov 2026 (IST).
 
 > **Agents collect, code computes, humans decide, chain proves.** No model output is ever a number in a score;
 > no scorecard is attested without an approved human approval; nothing is paid without an attestation.
@@ -71,7 +71,7 @@ Optional variables the API also reads (all have defaults; not in the frozen `.en
 - **Diff direction.** `GET /v1/scorecards/{to}/diff/{from}`: deltas are `to - from` (call it as `/{v2}/diff/{v1}`).
 - **World actions** are fixed strings, `pw-approve-scorecard` (signal = `Approval.challenge`) and `pw-cosign-claim` (signal = the claim's EIP-712 digest), because World actions are registered ahead of time; each proof is bound to its own challenge.
 - **Claims** may only target KRAs not fed by a system of record (`source` cosign/worklog/manual; `client_engagement` in the eng plan). The co-signer cannot be the employee. `occurred_on` must lie inside the cycle.
-- **Co-sign grants**: one live grant per claim (a new grant revokes the old one); every later call on a closed/expired grant is 410 `grant_closed`; the view returns only that one claim.
+- **Co-sign grants**: one live grant per claim (a new grant revokes the old one); every later call on a closed/expired grant is 410 `grant_closed`; the view returns only that one claim, including its `ai_flags` (CR-001).
 - **Payout** reads are chain truth for the scorecard's (subject, cycle); after a revision the governing attestation is the new one, so v1 and v2 show the same payout.
 - **Verify** without a reveal still checks Merkle inclusion against the on-chain root, revocation, the hash chain and the formula hash; with a reveal it also recomputes the commitment.
 
@@ -88,19 +88,20 @@ Optional variables the API also reads (all have defaults; not in the frozen `.en
 
 1. **Live adapters are untested against real services** (chain, World, 0G): see section 1. The mock paths are what the tests prove.
 2. **Reveal for evidence/scorecards**: the API never hands out evidence or score salts, so the "verify it yourself" panel can recompute commitments only for claims (whose signing package carries the salts). A reveal endpoint for the owner would need a CR.
-3. **Co-signer AI flags** are on `Claim` but not on `CosignView` until CR-001 is merged.
-4. **World ID 4.0** needs a server-signed RP context for IDKit (CR-002); the signing algorithm is not implemented yet.
-5. **Evidence lifecycle** `provisional -> vested` happens when the holdback is released (after `maturity_days`, 90 for engineering); `disputed` evidence and manager confirmation of unverified items have no endpoint in spec v1.
-6. **Connectors** read the seed scenario; there are no real GitHub/Jira/CRM integrations.
-7. **Single process**: the chain-write lock and rate limits are in-memory, so run one API instance.
-8. **Mock chain funding**: each cycle starts with 1,000,000 USDC in mock mode; in live mode the vault must be funded by Agent B's `fund` script, and every `e2e:chain` run reserves real testnet funds.
-9. **No ZK proofs** in this build (roadmap).
+3. **World ID 4.0** needs a server-signed RP context for IDKit (CR-002); the signing algorithm is not implemented yet.
+4. **Evidence lifecycle** `provisional -> vested` happens when the holdback is released (after `maturity_days`, 90 for engineering); `disputed` evidence and manager confirmation of unverified items have no endpoint in spec v1.
+5. **Connectors** read the seed scenario; there are no real GitHub/Jira/CRM integrations.
+6. **Single process**: the chain-write lock and rate limits are in-memory, so run one API instance.
+7. **Mock chain funding**: each cycle starts with 1,000,000 USDC in mock mode; in live mode the vault must be funded by Agent B's `fund` script, and every `e2e:chain` run reserves real testnet funds.
+8. **No ZK proofs** in this build (roadmap).
 
 ## 6. Change requests from Agent A
 
 | CR | What | Status |
 |---|---|---|
-| CR-001 | optional `ai_flags` on `CosignView` | proposed, no reply yet |
+| CR-001 | optional `ai_flags` on `CosignView` | **merged** (no reply within 30 min = ack); spec 1.1.0; the co-signer view now returns the flags |
 | CR-002 | optional `world_rp_context` on `Approval` and `CosignView` (World ID 4.0 RP signatures, U1) | proposed, no reply yet |
+
+Spec build on Windows: run the vector generator as `python -I -X utf8 spec/vectors/generate.py` (needs `eth-account`, `pyyaml`); without `-X utf8` Python writes cp1252 and truncates `vectors.json`.
 
 Tooling change outside `apps/api`: `scripts/spec-check.mjs` runs `pnpm`/`npx` through a shell on Windows (no behaviour change elsewhere); `.gitattributes` forces LF; `pnpm-workspace.yaml` allows the esbuild postinstall only.

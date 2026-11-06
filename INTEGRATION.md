@@ -1,6 +1,6 @@
 # INTEGRATION.md - how Agent A and Agent B stay compatible
 
-Spec version **1.0.0**. This file is FROZEN with `spec/`. Both agents read it fully before writing code. If this file and an agent file disagree, **this file wins**. If this file and `spec/` disagree, **`spec/` wins** (and file a CR to fix this file).
+Spec version **1.1.0** (1.0.0 + CR-001). This file is FROZEN with `spec/`. Both agents read it fully before writing code. If this file and an agent file disagree, **this file wins**. If this file and `spec/` disagree, **`spec/` wins** (and file a CR to fix this file).
 
 Precedence: `spec/` (openapi, ABIs, vectors, HASHING, ENGINE, eip712) > `INTEGRATION.md` > `AGENT_A.md` / `AGENT_B.md` > code.
 
@@ -99,7 +99,7 @@ A UI must show a small **MOCK** badge whenever a mode is `mock` (Agent B reads t
 6. **Auth:** `Authorization: Bearer <jwt>` for app users; `X-Cosign-Token` for the co-signer; `X-Connector-Key` for connectors. Web stores the JWT in memory + `sessionStorage` only.
 7. **Unknown fields:** server rejects them (`unknown_field`); client must not send extras. Server may *add* optional response fields in minor versions - clients ignore unknown response fields.
 8. **Idempotency:** creating POSTs accept `Idempotency-Key`; Agent B sends one per user action to survive double clicks.
-9. **Spec handshake:** API sends header `X-Spec-Version: 1.0.0` on every response and `/healthz.spec_version`. The web app compares the **major** with its compiled-in constant and shows a blocking banner on mismatch.
+9. **Spec handshake:** API sends header `X-Spec-Version: 1.1.0` on every response and `/healthz.spec_version`. The web app compares the **major** with its compiled-in constant and shows a blocking banner on mismatch.
 10. **Hex case:** hashes lowercase; addresses EIP-55 checksummed in API output; accept either on input (server normalises).
 11. **Pagination:** list endpoints return `{items}` (no pagination in v1; demo data is small).
 12. **Co-signer URL:** `/cosign#token=<token>` - the token lives in the **fragment** so it never reaches server logs; the web app moves it to memory and sends it as `X-Cosign-Token`.

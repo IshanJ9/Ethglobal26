@@ -349,7 +349,7 @@ export class ClaimService {
     return { g, r };
   }
 
-  /** Minimum view: the one claim, its excerpt, typed data, AI flags are on the Claim (see CR-001). No ids of other things, no scores. */
+  /** Minimum view: the one claim, its excerpt, typed data and AI flags. No ids of other things, no scores. */
   view(token: string | undefined): CosignView {
     const { g, r } = this.resolve(token);
     const employee = this.org.employee(r.employee_id)!;
@@ -365,6 +365,7 @@ export class ClaimService {
     };
     if (r.employee_sig) v.employee_signature = r.employee_sig;
     if (g.world_action) v.world_action = g.world_action;
+    v.ai_flags = JSON.parse(r.ai_flags_json); // CR-001: the co-signer sees e.g. prompt_injection_suspected
     return v;
   }
 
