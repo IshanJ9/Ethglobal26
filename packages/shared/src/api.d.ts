@@ -841,6 +841,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/scorecards/{scorecard_id}/zk-commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getZkCommitment"];
+        put?: never;
+        /** @description HR or the manager commits the scorecard's score for zero-knowledge proofs: commitment = Poseidon(score_bps, salt, binding), binding = keccak(scorecard_id) >> 8, anchored on Arc (anchorBatch, batch ids >= 2e9). Idempotent per scorecard. The employee can then prove 'score >= threshold' without revealing the score. */
+        post: operations["zkCommitScorecard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/scorecards/{scorecard_id}/zk-witness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Only the scorecard's employee: the private witness (score + salt) needed to generate the proof in their browser. Never shown to anyone else. */
+        get: operations["getZkWitness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1668,6 +1702,37 @@ export interface components {
             };
             created_by: string;
             created_at: components["schemas"]["Timestamp"];
+        };
+        ZkCommitment: {
+            scorecard_id: string;
+            /** @description Poseidon commitment, decimal field element */
+            commitment: string;
+            commitment_hex: components["schemas"]["Bytes32"];
+            /** @description decimal field element = keccak256(utf8(scorecard_id)) >> 8 */
+            binding: string;
+            /** @description score_threshold (Groth16, BN254) */
+            circuit: string;
+            numeric_batch_id: number;
+            tx_hash: string;
+            /** @enum {string} */
+            chain_mode: "live" | "mock";
+            explorer_url: string | null;
+            /** @description ScoreThresholdVerifier on Arc (verifyProof) */
+            verifier_address: string | null;
+            registry_address: string;
+            chain_id: number;
+            created_at: components["schemas"]["Timestamp"];
+        };
+        ZkWitness: {
+            scorecard_id: string;
+            score_bps: number;
+            salt: string;
+            commitment: string;
+            binding: string;
+            numeric_batch_id: number;
+            verifier_address: string | null;
+            registry_address: string;
+            chain_id: number;
         };
     };
     responses: {
@@ -3027,6 +3092,78 @@ export interface operations {
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
+        };
+    };
+    getZkCommitment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scorecard_id: components["parameters"]["ScorecardId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZkCommitment"];
+                };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    zkCommitScorecard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scorecard_id: components["parameters"]["ScorecardId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZkCommitment"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getZkWitness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scorecard_id: components["parameters"]["ScorecardId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZkWitness"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
         };
     };
 }

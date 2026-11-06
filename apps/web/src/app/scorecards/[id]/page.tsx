@@ -11,6 +11,7 @@ import { formatBps } from "@/lib/format";
 import { useCycles, useEmployees, useEvidence, usePayout, usePlan, useScorecard } from "@/lib/queries";
 import { EvidenceTable, PayoutPanel, RevisionDiff, ScoreBreakdown } from "@/components/scorecard";
 import { ModeBadge } from "@/components/ModeBadge";
+import { ZkCard } from "@/components/ZkCard";
 import { Button, Card, ErrorNote, HashPill, Loading, Money, PageTitle, Stat, StatusChip, TextLink } from "@/components/ui";
 
 export default function ScorecardPage() {
@@ -123,6 +124,8 @@ export default function ScorecardPage() {
           <RevisionDiff diff={diff.data} labels={labels} from={prev.data} to={s} />
         </Card>
       ) : null}
+
+      {me ? <ZkCard scorecardId={s.scorecard_id} employeeId={s.employee_id} status={s.status} me={me} /> : null}
 
       <Card title="How the score was computed">
         <ScoreBreakdown result={s.result} labels={labels} />

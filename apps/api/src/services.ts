@@ -33,6 +33,7 @@ import { ContextService } from "./review/context.ts";
 import { VaultReader } from "./review/vault.ts";
 import { ZeroGReasoner, type Reasoner } from "./review/reasoning.ts";
 import { ReviewService } from "./review/reviews.ts";
+import { ZkService } from "./zk/zk.ts";
 
 export interface ServiceOverrides {
   clock?: Clock;
@@ -99,9 +100,11 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   }
   const reviews = new ReviewService(db, org, evidence, clusters, contextSvc, vault, reasoner, chain, world, audit, config, clock, log, (fn) => chainSvc.exclusive(fn));
 
+  const zk = new ZkService(db, scorecards, org, envelope, chain, audit, config, clock, (fn) => chainSvc.exclusive(fn));
+
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,
-    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews,
+    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk,
   };
 }
 export type Services = ReturnType<typeof buildServices>;

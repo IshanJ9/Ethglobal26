@@ -1,0 +1,41 @@
+{
+  "resolvers": {
+    "software": "0x60F8Dd4bEaF1C0F45EEcC8A42febC8e000438B7c",
+    "sales": "0x36Bc4A576D25F9e0aBAfE783A4E21B5b48358431",
+    "marketing": "0x3c622062C600103b63130827d4e5a98EA1c95B46",
+    "product": "0x7d6F158cbE14FF866a4B87eBD6805738a18a1582",
+    "people": "0xbCA4d4A836502c7923deD8b34553305B5d161478",
+    "kra-agent": "0xAd18a48f60Af05A825E3A089bc697d067a9C93Fa",
+    "review-agent": "0x26e6c086413fF682FaC706f1662D0Cf242F5701E"
+  },
+  "parent": "proofwork-demo.eth",
+  "roles": {
+    "admin": "0xaa083688a415b7A10eBe3b6e9fa1c16Dd20Eb6a2",
+    "hr": "0x148e33e153c6c93bC91CAC71D16487B93c52abD7",
+    "managers": {
+      "software": "0x533cD3D69794436c3BF8ef0F1Eca50f3782dBbFa",
+      "sales": "0x44D6852BD76d643575563ef1078d87db58C3d0D6",
+      "marketing": "0x75C989274262d545B872F298B1173951A97af8fD"
+    },
+    "manager_keys": [
+      "title",
+      "cluster",
+      "status"
+    ],
+    "issuer": "0xF4Bdc90ADFE6EbcE8645282b968D0795EdDD227A",
+    "review_agent": "0xB6b94f42AA5Bf066C28d97dDfc355A619a3905eF",
+    "aliases": {
+      "head.software.proofwork-demo.eth": "elena.proofwork-demo.eth",
+      "head.sales.proofwork-demo.eth": "grace.proofwork-demo.eth",
+      "head.marketing.proofwork-demo.eth": "isha.proofwork-demo.eth",
+      "hrbp.people.proofwork-demo.eth": "jon.proofwork-demo.eth"
+    },
+    "role_bits": {
+      "SET_ADDRESS": "1<<0",
+      "SET_TEXT": "1<<4",
+      "SET_DATA": "1<<24",
+      "LINK": "1<<28",
+      "admin": "role<<128"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Proofwork API
-  version: 1.4.0
+  version: 1.5.0
   description: |
     FROZEN CONTRACT between Agent A (implements) and Agent B (consumes). Changes only via CHANGE_REQUESTS.md.
     Conventions (apply everywhere):
@@ -28,6 +28,7 @@ tags:
   - { name: payouts }
   - { name: verify }
   - { name: review }
+  - { name: zk }
   - { name: dev }
 security:
   - bearerAuth: []
@@ -722,6 +723,34 @@ paths:
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
+  /v1/scorecards/{scorecard_id}/zk-commit:
+    post:
+      tags: [zk]
+      operationId: zkCommitScorecard
+      description: "HR or the manager commits the scorecard's score for zero-knowledge proofs: commitment = Poseidon(score_bps, salt, binding), binding = keccak(scorecard_id) >> 8, anchored on Arc (anchorBatch, batch ids >= 2e9). Idempotent per scorecard. The employee can then prove 'score >= threshold' without revealing the score."
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ZkCommitment" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+    get:
+      tags: [zk]
+      operationId: getZkCommitment
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ZkCommitment" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/scorecards/{scorecard_id}/zk-witness:
+    get:
+      tags: [zk]
+      operationId: getZkWitness
+      description: "Only the scorecard's employee: the private witness (score + salt) needed to generate the proof in their browser. Never shown to anyone else."
+      parameters: [{ $ref: "#/components/parameters/ScorecardId" }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ZkWitness" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -1731,3 +1760,35 @@ components:
             model: { type: string }
         created_by: { type: string }
         created_at: { $ref: "#/components/schemas/Timestamp" }
+    ZkCommitment:
+      type: object
+      additionalProperties: false
+      required: [scorecard_id, commitment, commitment_hex, binding, circuit, numeric_batch_id, tx_hash, chain_mode, explorer_url, verifier_address, registry_address, chain_id, created_at]
+      properties:
+        scorecard_id: { type: string }
+        commitment: { type: string, description: "Poseidon commitment, decimal field element" }
+        commitment_hex: { $ref: "#/components/schemas/Bytes32" }
+        binding: { type: string, description: "decimal field element = keccak256(utf8(scorecard_id)) >> 8" }
+        circuit: { type: string, description: "score_threshold (Groth16, BN254)" }
+        numeric_batch_id: { type: integer }
+        tx_hash: { type: string }
+        chain_mode: { type: string, enum: [live, mock] }
+        explorer_url: { type: [string, "null"] }
+        verifier_address: { type: [string, "null"], description: "ScoreThresholdVerifier on Arc (verifyProof)" }
+        registry_address: { type: string }
+        chain_id: { type: integer }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+    ZkWitness:
+      type: object
+      additionalProperties: false
+      required: [scorecard_id, score_bps, salt, commitment, binding, numeric_batch_id, verifier_address, registry_address, chain_id]
+      properties:
+        scorecard_id: { type: string }
+        score_bps: { type: integer }
+        salt: { type: string }
+        commitment: { type: string }
+        binding: { type: string }
+        numeric_batch_id: { type: integer }
+        verifier_address: { type: [string, "null"] }
+        registry_address: { type: string }
+        chain_id: { type: integer }

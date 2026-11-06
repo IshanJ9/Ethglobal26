@@ -49,6 +49,11 @@ export async function reviewRoutes(app: FastifyInstance, { svc }: { svc: Service
     svc.reviews.anchor(me(req), (req.params as { review_id: string }).review_id, (req.body as { world_result?: WorldResult } | undefined)?.world_result),
   );
 
+  // ---- zero-knowledge score proofs ----
+  app.post("/v1/scorecards/:scorecard_id/zk-commit", auth, async (req) => svc.zk.commit(me(req), (req.params as { scorecard_id: string }).scorecard_id));
+  app.get("/v1/scorecards/:scorecard_id/zk-commit", auth, async (req) => svc.zk.get(me(req), (req.params as { scorecard_id: string }).scorecard_id));
+  app.get("/v1/scorecards/:scorecard_id/zk-witness", auth, async (req) => svc.zk.witness(me(req), (req.params as { scorecard_id: string }).scorecard_id));
+
   app.post("/v1/reviews/:review_id/acknowledge", auth, async (req) =>
     svc.reviews.acknowledge(me(req), (req.params as { review_id: string }).review_id, (req.body as { world_result?: WorldResult }).world_result),
   );

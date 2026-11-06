@@ -13,5 +13,7 @@
     "anchor": "0x93a7931e4F6A1F124d438FA3fAB7E5d814A52A58",
     "payout": "0x0351C881633238E0E900755b50BB9258cDC9EF54"
   },
-  "deployedAt": "2026-11-06T10:08:07Z"
+  "deployedAt": "2026-11-06T10:08:07Z",
+  "zkVerifier": "0x1907a282369b7CeE9cf169F43d222d6d13F46728",
+  "zkVerifierNote": "ScoreThresholdVerifier (snarkjs Groth16, packages/zk); deploy tx 0x2ef55a6b...8d4a. ZK commitments anchored on the registry as batch ids >= 2e9."
 }

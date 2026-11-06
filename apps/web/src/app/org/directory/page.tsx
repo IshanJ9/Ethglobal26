@@ -79,6 +79,7 @@ export default function DirectoryPage() {
       <PageTitle
         title="Organisation on ENS"
         sub={`${manifest.parent} is the company directory: departments, peer clusters, AI agents, chain signers, contracts and every person. Every row below is resolved live from Sepolia ENS (ENSv2); the tick means the chain matches.`}
+        right={<a href="/org/access" className="text-sm underline">Who can edit what →</a>}
       />
       {SECTIONS.map(([kind, title, about]) => {
         const rows = NAMES.filter((n) => n.kind === kind);

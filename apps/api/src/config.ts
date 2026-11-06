@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-export const SPEC_VERSION = "1.4.0";
+export const SPEC_VERSION = "1.5.0";
 
 /** apps/api directory and monorepo root, independent of the process cwd. */
 export const API_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -62,6 +62,7 @@ const schema = z.object({
   ZEROG_STORAGE_RPC: optStr,
   ZEROG_STORAGE_INDEXER: optStr,
   ZEROG_PRIVATE_KEY: optStr,
+  ZK_VERIFIER_ADDRESS: optStr,
 
   ENS_NETWORK: z.enum(["none", "sepolia", "mainnet"]).default("none"),
   ENS_PARENT_NAME: optStr,
