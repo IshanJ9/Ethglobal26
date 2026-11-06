@@ -105,7 +105,7 @@ export function normalizeNullifier(n: string): string {
   }
 }
 
-/** Records a nullifier; false if it was already used (replay). Call inside a transaction. */
+/** Records a nullifier for one context (action:object_id); false if that exact pair was already used (replay). Call inside a transaction. */
 export function consumeNullifier(db: DB, nullifier: string, context: string, at: string): boolean {
   const r = db.prepare("INSERT OR IGNORE INTO world_nullifiers (nullifier, context, used_at) VALUES (?, ?, ?)").run(nullifier, context, at);
   return r.changes === 1;

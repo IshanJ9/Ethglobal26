@@ -70,7 +70,7 @@ describe("scorecards + approvals", () => {
     expect(ok.json()).toMatchObject({ status: "approved", approver_employee_id: "emp_eng_mgr" });
     expect(ok.json().approval_proof_hash).toMatch(/^0x[0-9a-f]{64}$/);
     const b = (await approval((await sc("emp_dev_b")).scorecard_id)).json();
-    const replay = await complete(b.approval_id, { decision: "approve", world_result: { adapter: "mock", payload: { ...proof.payload, signal: b.challenge } } });
+    const replay = await complete(b.approval_id, { decision: "approve", world_result: proof }); // bound to a.challenge
     expect(replay.statusCode).toBe(401);
     expect(replay.json().error.code).toBe("world_verification_failed");
     // Only a hash of the World result is stored.

@@ -101,7 +101,8 @@ describe("negative tests n01-n18 (seed-scenario.json)", () => {
     const proof = world(a1);
     expect((await c.call("POST", `/v1/approvals/${a1.approval_id}/complete`, c.mgr, { decision: "approve", world_result: proof })).status).toBe(200);
     const a2 = (await c.call("POST", "/v1/approvals", c.mgr, { scorecard_id: (await scorecard(c, "emp_dev_b")).scorecard_id })).json;
-    const replay = { adapter: "mock", payload: { ...proof.payload, signal: a2.challenge } };
+    // A replayed proof carries the signal it was made for (a1); a fresh proof by the same human for a2 is legitimate.
+    const replay = proof;
     expectError(await c.call("POST", `/v1/approvals/${a2.approval_id}/complete`, c.mgr, { decision: "approve", world_result: replay }), NEG.n04_world_proof_replayed);
   });
 

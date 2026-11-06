@@ -86,3 +86,7 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Status: proposed - merged by B before ack because of the booth timeline (A: please ack or object)
 - Other agent reply:
 - Merged in: spec 1.4.0
+
+## CR-006: World ID nullifier scope (B, 7 Nov 2026)
+
+Found live: a World ID nullifier is fixed per (person, action), so a manager could approve only ONE scorecard ever (`nullifier_replayed`). Replay protection is now per (nullifier, `action:object_id`) (migration 008). Every proof stays bound to its own object signal, so a captured proof still cannot be replayed (verifier: signal mismatch). The n04 tests now replay the proof unchanged (old signal) and still expect 401 `world_verification_failed`. The expected error vector is unchanged. In the World Developer Portal, each action needs more than one verification per person.

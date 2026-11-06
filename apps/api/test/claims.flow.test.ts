@@ -151,7 +151,7 @@ describe("claims F1", () => {
 
     // Replay the same proof on another claim's grant.
     const second = await toGrant(app, { ...C.c2_prompt_injection, raw_text: "Second call with Acme Bank on 20 Oct." }, "world_id");
-    const replay = { adapter: "mock", payload: { ...world.payload, signal: second.pkg.digest } };
+    const replay = world; // the captured proof is bound to the first claim's digest
     const cs2 = await signTyped(CFO, second.pkg.typed_data);
     const r = await app.inject({ method: "POST", url: "/v1/cosign/sign", headers: second.tok, payload: { signature: cs2, world_result: replay } });
     expect(r.statusCode).toBe(401);
