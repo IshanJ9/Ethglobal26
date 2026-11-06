@@ -22,7 +22,8 @@ const middleware: Middleware = {
     if (session && !request.headers.has("Authorization")) {
       request.headers.set("Authorization", `Bearer ${session.token}`);
     }
-    // One Idempotency-Key per user action survives double clicks (INTEGRATION 5.8).
+    // User actions set their own per-action key via useAction/idem (lib/action.ts) so retries reuse it.
+    // This fallback only covers a POST made outside useAction; it gives no double-click protection.
     if (request.method === "POST" && !request.headers.has("Idempotency-Key")) {
       request.headers.set("Idempotency-Key", crypto.randomUUID());
     }

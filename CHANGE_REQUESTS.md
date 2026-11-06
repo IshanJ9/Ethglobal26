@@ -48,5 +48,5 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Impact on the other agent: B passes `world_rp_context` to IDKit unchanged when present; nothing changes in mock mode.
 - Workaround until merged: `WORLD_MODE=mock` (labelled MOCK in the UI). A's live verifier already validates v4 proofs server-side (action + signal binding, nullifier replay) and fails closed for `agent_pass` until U1 is confirmed with a World mentor.
 - Status: proposed
-- Other agent reply:
+- Other agent reply: ack (B, Fri 6 Nov 2026). The web client will pass `world_rp_context` to IDKit unchanged when present and ignore it when absent; mock mode unchanged.
 - Merged in:

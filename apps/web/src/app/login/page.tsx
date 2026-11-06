@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { idem, useAction } from "@/lib/action";
 import { api, ApiError, unwrap, type Persona } from "@/lib/api";
 import { usePublicConfig } from "@/lib/config";
 import { errorMessage } from "@/lib/errors";
@@ -15,14 +15,16 @@ export default function LoginPage() {
   const router = useRouter();
   const { data: cfg } = usePublicConfig();
 
-  const login = useMutation({
-    mutationFn: (persona_id: Persona["persona_id"]) =>
-      unwrap(api.POST("/v1/dev/login", { body: { persona_id } })),
-    onSuccess: ({ token, persona }) => {
-      setSession({ token, persona });
-      router.push("/");
+  const login = useAction(
+    (persona_id: Persona["persona_id"], key) =>
+      unwrap(api.POST("/v1/dev/login", { body: { persona_id }, ...idem(key) })),
+    {
+      onSuccess: ({ token, persona }) => {
+        setSession({ token, persona });
+        router.push("/");
+      },
     },
-  });
+  );
 
   if (cfg && cfg.auth_mode !== "dev") {
     return (

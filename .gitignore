@@ -15,3 +15,5 @@ contracts/cache/
 hhhhhh.pdf
 proofwork-scaffold.zip
 *.tsbuildinfo
+contracts/out/
+contracts/flat/
