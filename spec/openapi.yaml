@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Proofwork API
-  version: 1.3.0
+  version: 1.4.0
   description: |
     FROZEN CONTRACT between Agent A (implements) and Agent B (consumes). Changes only via CHANGE_REQUESTS.md.
     Conventions (apply everywhere):
@@ -685,10 +685,41 @@ paths:
     post:
       tags: [review]
       operationId: anchorReview
-      description: "HR anchors the review hash on chain (registry anchorBatch, count 1, batch ids >= 1e9) so the reasoning shown in the bonus review is provably the one produced from the committed data."
+      description: "HR anchors the review hash on chain (registry anchorBatch, count 1, batch ids >= 1e9) so the reasoning shown in the bonus review is provably the one produced from the committed data. Requires a World ID step-up (action pw-anchor-review, signal = review_hash): a real, unique human signs off."
       parameters: [{ name: review_id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                world_result: { $ref: "#/components/schemas/WorldResult" }
       responses:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Review" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/reviews/{review_id}/acknowledge:
+    post:
+      tags: [review]
+      operationId: acknowledgeReview
+      description: "The employee confirms with World ID (action pw-ack-review, signal = review_hash) that they received exactly this review. Only the reviewed employee; once; replayed proofs are rejected."
+      parameters: [{ name: review_id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [world_result]
+              properties:
+                world_result: { $ref: "#/components/schemas/WorldResult" }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Review" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
 components:
@@ -1615,6 +1646,7 @@ components:
         reasoning_source: { type: string, enum: [0g_private_computer, deterministic_fallback, mock] }
         review_hash: { $ref: "#/components/schemas/Bytes32" }
         anchor_tx_hash: { type: [string, "null"] }
+        acknowledged: { type: boolean }
         created_at: { $ref: "#/components/schemas/Timestamp" }
     Review:
       type: object
@@ -1668,5 +1700,34 @@ components:
                 chain_mode: { type: string, enum: [live, mock] }
                 explorer_url: { type: [string, "null"] }
                 anchored_at: { $ref: "#/components/schemas/Timestamp" }
+                anchored_by: { type: string }
+                world_result_hash: { type: [string, "null"] }
+        acknowledgement:
+          oneOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              required: [acknowledged_by, acknowledged_at, world_result_hash, world_mode]
+              properties:
+                acknowledged_by: { type: string }
+                acknowledged_at: { $ref: "#/components/schemas/Timestamp" }
+                world_result_hash: { type: string }
+                world_mode: { type: string, enum: [live, mock] }
+        world_actions:
+          type: object
+          additionalProperties: false
+          required: [anchor, acknowledge, signal]
+          properties:
+            anchor: { type: string }
+            acknowledge: { type: string }
+            signal: { $ref: "#/components/schemas/Bytes32" }
+        reasoning_agent:
+          type: object
+          additionalProperties: false
+          required: [ens_name, system_prompt_hash, model]
+          properties:
+            ens_name: { type: [string, "null"], description: "ENS name whose `prompt` text record must equal system_prompt_hash" }
+            system_prompt_hash: { $ref: "#/components/schemas/Bytes32" }
+            model: { type: string }
         created_by: { type: string }
         created_at: { $ref: "#/components/schemas/Timestamp" }

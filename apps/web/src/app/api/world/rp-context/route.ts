@@ -8,7 +8,7 @@ import { signRequest } from "@worldcoin/idkit-core/signing";
  * bundled for the browser. It signs only Proofwork's two actions, for a short time. When the API starts serving
  * `world_rp_context` (CR-002), the web uses that instead and this route goes unused.
  */
-const ACTIONS = new Set(["pw-approve-scorecard", "pw-cosign-claim"]);
+const ACTIONS = new Set(["pw-approve-scorecard", "pw-cosign-claim", "pw-anchor-review", "pw-ack-review"]);
 const TTL_SECONDS = 300;
 
 export const dynamic = "force-dynamic";

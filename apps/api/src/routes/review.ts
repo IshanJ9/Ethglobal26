@@ -4,6 +4,7 @@ import { canView, isInternal, makeAuthenticate, me } from "../auth/auth.ts";
 import { errors } from "../errors.ts";
 import { clusterIdOf } from "../db/org.ts";
 import type { Services } from "../services.ts";
+import type { WorldResult } from "../world/verifier.ts";
 
 export async function reviewRoutes(app: FastifyInstance, { svc }: { svc: Services }) {
   const auth = { onRequest: makeAuthenticate(svc.jwt, svc.org) };
@@ -44,5 +45,11 @@ export async function reviewRoutes(app: FastifyInstance, { svc }: { svc: Service
 
   app.get("/v1/reviews/:review_id", auth, async (req) => svc.reviews.get(me(req), (req.params as { review_id: string }).review_id));
 
-  app.post("/v1/reviews/:review_id/anchor", auth, async (req) => svc.reviews.anchor(me(req), (req.params as { review_id: string }).review_id));
+  app.post("/v1/reviews/:review_id/anchor", auth, async (req) =>
+    svc.reviews.anchor(me(req), (req.params as { review_id: string }).review_id, (req.body as { world_result?: WorldResult } | undefined)?.world_result),
+  );
+
+  app.post("/v1/reviews/:review_id/acknowledge", auth, async (req) =>
+    svc.reviews.acknowledge(me(req), (req.params as { review_id: string }).review_id, (req.body as { world_result?: WorldResult }).world_result),
+  );
 }

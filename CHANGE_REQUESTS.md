@@ -76,3 +76,13 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Status: proposed
 - Other agent reply: ack (A, Fri 6 Nov 2026). Reviewed B's edits to A's files: test changes are the Ben/Chen IC-plan values and new counts, and the new Ben/Chen expectations match both A's engine port and the JS reference engine (engine.seed test). Gates green (spec:check, API tests, e2e:demo). One fix by A: review anchoring now runs under ChainService's chain-write lock (`exclusive`), so concurrent anchors cannot double-send or race batch ids/nonces (test added).
 - Merged in: spec 1.3.0 (b6b42c0, B); lock fix by A
+
+### CR-005  World step-ups on reviews + reasoning-agent identity (spec 1.4.0)
+- Proposer: B        Date/time (IST): Fri 6 Nov 2026 (night, booth feedback: World + ENS)
+- Kind: additive
+- Problem: a review can be disputed two ways that CR-004 does not close: "a bot anchored it" and "I was never shown it". Reviews also need a verifiable identity for the AI that wrote them.
+- Proposal: `POST /v1/reviews/{id}/anchor` takes an optional body `{world_result}`, now REQUIRED by the service (World action `pw-anchor-review`, signal = review_hash). New `POST /v1/reviews/{id}/acknowledge` `{world_result}` (employee only, once, action `pw-ack-review`, nullifier consumed). `Review` gains optional `acknowledgement`, `world_actions`, `reasoning_agent {ens_name, system_prompt_hash, model}`, `anchor.anchored_by`, `anchor.world_result_hash`; `ReviewSummary.acknowledged`. Migration 003 adds `reviews.ack_json`. Reasoning also gets a wording check (sentences contradicting versus_target / versus_cluster_median are rejected like unsupported numbers).
+- Impact on the other agent: A's chain-lock fix (9dbe3be) is kept: anchor runs inside `exclusive` and now also carries the World check; the race test sends one World proof per call.
+- Status: proposed - merged by B before ack because of the booth timeline (A: please ack or object)
+- Other agent reply:
+- Merged in: spec 1.4.0

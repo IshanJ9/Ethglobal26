@@ -38,6 +38,7 @@ export function AppHeader() {
                   </>
                 ) : null}
                 <Link href="/reviews" className="text-muted hover:text-ink">Reviews</Link>
+                <Link href="/org/directory" className="text-muted hover:text-ink">Directory</Link>
                 {session.persona.role === "hr" ? <Link href="/audit" className="text-muted hover:text-ink">Audit</Link> : null}
                 <Link href="/privacy" className="text-muted hover:text-ink">Privacy</Link>
                 <Link href="/verify" className="text-muted hover:text-ink">Verify</Link>

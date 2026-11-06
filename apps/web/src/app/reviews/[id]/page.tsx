@@ -7,6 +7,9 @@ import { idem, useAction } from "@/lib/action";
 import { useRequireSession, useSignOutOnUnauthorized } from "@/lib/auth";
 import { formatBps, formatUsdc } from "@/lib/format";
 import { useReview } from "@/lib/queries";
+import { usePublicConfig } from "@/lib/config";
+import { requestWorldProof } from "@/lib/world";
+import { useEnsText } from "@/lib/ens";
 import { ActorTag, Button, Card, ErrorNote, HashPill, Loading, PageTitle, Stat, StatusChip, TextLink } from "@/components/ui";
 import { DistStrip, LayerHeader, SignalChips, SourceBadge, pctPpm, zText } from "@/components/review";
 
@@ -37,9 +40,27 @@ export default function ReviewPage() {
   const qc = useQueryClient();
   const q = useReview(id);
   useSignOutOnUnauthorized(q.error);
-  const anchor = useAction((_: string, key) => unwrap(api.POST("/v1/reviews/{review_id}/anchor", { params: { path: { review_id: id } }, ...idem(key) })), {
-    onSuccess: (r) => qc.setQueryData(["review", id, me?.persona_id], r),
-  });
+  const { data: cfg } = usePublicConfig();
+  const review = q.data;
+  // World ID bound to THIS review: the signal is the review hash.
+  const prove = (action: string) =>
+    requestWorldProof(cfg?.world_mode ?? "mock", { action, signal: review!.hashes.review_hash, appId: cfg?.world_app_id });
+  const anchor = useAction(
+    async (_: string, key) => {
+      const world_result = await prove(review!.world_actions?.anchor ?? "pw-anchor-review");
+      return unwrap(api.POST("/v1/reviews/{review_id}/anchor", { params: { path: { review_id: id } }, body: { world_result }, ...idem(key) }));
+    },
+    { onSuccess: (r) => qc.setQueryData(["review", id, me?.persona_id], r) },
+  );
+  const acknowledge = useAction(
+    async (_: string, key) => {
+      const world_result = await prove(review!.world_actions?.acknowledge ?? "pw-ack-review");
+      return unwrap(api.POST("/v1/reviews/{review_id}/acknowledge", { params: { path: { review_id: id } }, body: { world_result }, ...idem(key) }));
+    },
+    { onSuccess: (r) => qc.setQueryData(["review", id, me?.persona_id], r) },
+  );
+  // ENS: the reasoning agent publishes the hash of its system prompt; check it matches what wrote this review.
+  const agentPrompt = useEnsText(review?.reasoning_agent?.ens_name ?? undefined, "prompt");
   if (!me) return null;
   if (q.isLoading) return <Loading what="Loading review" />;
   const r = q.data;
@@ -49,6 +70,8 @@ export default function ReviewPage() {
   const rs = r.reasoning;
   const plan = r.cluster.plan_name;
   const isHr = me.role === "hr";
+  const isSubject = me.employee_id === r.employee_id;
+  const promptOk = agentPrompt.data ? agentPrompt.data.toLowerCase() === r.reasoning_agent?.system_prompt_hash : null;
 
   return (
     <div className="flex max-w-5xl flex-col gap-6 print:max-w-none">
@@ -184,6 +207,13 @@ export default function ReviewPage() {
       <Card>
         <div className="flex flex-col gap-4">
           <LayerHeader n={3} title="Reasoning for the review meeting" who={r.reasoning_source === "0g_private_computer" ? "AI writes, inside 0G Private Computer · every number checked against the data" : "deterministic writer · every number checked against the data"} />
+          {r.reasoning_agent?.ens_name ? (
+            <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
+              Written by <span className="rounded-full bg-ai/15 px-2 py-0.5 font-mono font-semibold text-ai">{r.reasoning_agent.ens_name}</span>
+              model {r.reasoning_agent.model} · prompt <HashPill value={r.reasoning_agent.system_prompt_hash} />
+              {promptOk === true ? <span className="text-chain">✓ matches the agent&apos;s ENS `prompt` record</span> : promptOk === false ? <span className="text-danger">✗ differs from the ENS `prompt` record</span> : <span>(checking ENS…)</span>}
+            </p>
+          ) : null}
           {r.fallback_reason ? <p className="rounded-md border border-human/40 bg-human/10 px-3 py-2 text-sm text-human">0G answer not used: {r.fallback_reason}. This text was written by code from the same packet.</p> : null}
           <h2 className="font-display text-2xl font-semibold leading-tight">{rs.headline}</h2>
           <p className="leading-relaxed"><Linked text={rs.summary} /></p>
@@ -271,11 +301,26 @@ export default function ReviewPage() {
             ) : isHr ? (
               <div className="flex flex-col gap-2 print:hidden">
                 <p className="text-muted">Not anchored yet. Anchoring writes the review hash to the Arc registry so the employee can check this exact text later.</p>
-                <Button onClick={() => anchor.mutate(r.review_id)} disabled={anchor.isPending}>{anchor.isPending ? "Anchoring on Arc…" : "Anchor review on chain"}</Button>
+                <Button onClick={() => anchor.mutate(r.review_id)} disabled={anchor.isPending}>{anchor.isPending ? "World ID, then Arc…" : "Verify with World ID and anchor on chain"}</Button>
                 <ErrorNote error={anchor.error} />
               </div>
             ) : (
               <p className="text-muted">Not anchored yet (HR anchors it).</p>
+            )}
+            <p className="font-semibold">Employee acknowledgement (World ID)</p>
+            {r.acknowledgement ? (
+              <p className="text-chain">
+                {r.display_name} confirmed with World ID ({r.acknowledgement.world_mode}) that they received exactly this review on {new Date(r.acknowledgement.acknowledged_at).toLocaleString()}.{" "}
+                <span className="text-xs text-muted">proof <HashPill value={r.acknowledgement.world_result_hash} /></span>
+              </p>
+            ) : isSubject ? (
+              <div className="flex flex-col gap-2 print:hidden">
+                <p className="text-muted">Confirm you received this review. World ID proves it is you, bound to this review&apos;s hash, and works once.</p>
+                <Button onClick={() => acknowledge.mutate(r.review_id)} disabled={acknowledge.isPending}>{acknowledge.isPending ? "Waiting for World ID…" : "I received this review (World ID)"}</Button>
+                <ErrorNote error={acknowledge.error} />
+              </div>
+            ) : (
+              <p className="text-muted">Not acknowledged yet. {r.display_name} confirms it from their own login with World ID.</p>
             )}
             <p className="text-xs text-muted">Prepared by {r.created_by} on {new Date(r.created_at).toLocaleString()}. <TextLink href={`/clusters?c=${r.cluster.cluster_id}`}>Open the cluster</TextLink></p>
           </div>

@@ -136,15 +136,26 @@ describe("reviews (layer 3)", () => {
     expect(v.vault.from_0g).toBe(v.vault.items_total); // read back from the (local) replica, not the DB
     expect(v.peer.peer_display_name).toBe("Dev Patel");
     expect(v.hashes.review_hash).toMatch(/^0x[0-9a-f]{64}$/);
-    // anchor (mock chain), idempotent
-    const a1 = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr })).json();
-    const a2 = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr })).json();
+    // anchor needs a World step-up bound to the review hash; idempotent once anchored
+    expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr })).statusCode).toBe(401);
+    const w = (action: string) => ({ world_result: { adapter: "mock", payload: { action, signal: v.hashes.review_hash, nullifier: "0x" + Math.random().toString(16).slice(2).padEnd(64, "a") } } });
+    const a1 = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w("pw-anchor-review") })).json();
+    const a2 = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w("pw-anchor-review") })).json();
+    expect(a1.anchor.anchored_by).toBe("p_hr");
     expect(a1.anchor.numeric_batch_id).toBeGreaterThanOrEqual(1_000_000_000);
     expect(a2.anchor.tx_hash).toBe(a1.anchor.tx_hash);
     expect(await app.svc.chain.batchRoot(BigInt(a1.anchor.numeric_batch_id))).toBe(v.hashes.review_hash);
     // the employee can read their own review; another IC cannot
     const ben = await login(app, "p_dev_b");
     expect((await app.inject({ method: "GET", url: `/v1/reviews/${v.review_id}`, headers: ben })).statusCode).toBe(200);
+    // the employee acknowledges with World ID (bound to the review hash, wrong action rejected, once only)
+    expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: w("pw-anchor-review") })).statusCode).toBe(401);
+    const ackProof = w("pw-ack-review");
+    const ack = (await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: ackProof })).json();
+    expect(ack.acknowledgement.acknowledged_by).toBe("emp_dev_b");
+    expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: ackProof })).statusCode).toBe(409);
+    expect((await app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: hr, payload: w("pw-ack-review") })).statusCode).toBe(403);
+    expect(v.reasoning_agent.system_prompt_hash).toMatch(/^0x[0-9a-f]{64}$/);
     const chen = await login(app, "p_dev_c");
     expect((await app.inject({ method: "GET", url: `/v1/reviews/${v.review_id}`, headers: chen })).statusCode).toBe(404);
     expectNoViolations(app);
@@ -159,9 +170,11 @@ describe("reviews (layer 3)", () => {
       const orig = chain[m].bind(chain);
       chain[m] = async (...args: unknown[]) => (await new Promise((r) => setTimeout(r, 25)), orig(...args));
     }
+    // each click carries its own World step-up proof (bound to the review hash)
+    const w = (n: string) => ({ world_result: { adapter: "mock", payload: { action: "pw-anchor-review", signal: v.hashes.review_hash, nullifier: "0x" + n.repeat(64) } } });
     const [a, b] = await Promise.all([
-      app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr }),
-      app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr }),
+      app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w("a") }),
+      app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr, payload: w("b") }),
     ]);
     expect([a.statusCode, b.statusCode]).toEqual([200, 200]);
     expect(b.json().anchor.tx_hash).toBe(a.json().anchor.tx_hash);
@@ -185,6 +198,15 @@ describe("reviews (layer 3)", () => {
     expect(v.number_check).toMatchObject({ passed: true, attempts: 2 });
     expect(v.inference_provider).toBe("0xf4FB8d2bD856e672b5f9848b0eD235A20079B250");
     expectNoViolations(app);
+  });
+
+  it("wording check: a sentence contradicting the data is rejected (the real 0G mistake from 6 Nov)", async () => {
+    const fake = fakeReasoner([answer("Severity-weighted bug-fix credit is below the cluster median."), answer("Ben is above the cluster median.")]);
+    const { app, hr } = await populated(fake);
+    const v = (await app.inject({ method: "POST", url: "/v1/reviews", headers: hr, payload: { employee_id: "emp_dev_b", cycle_id: C1 } })).json();
+    expect(fake.calls).toBe(2);
+    expect(v.reasoning_source).toBe("0g_private_computer");
+    expect(v.number_check).toMatchObject({ passed: true, attempts: 2 });
   });
 
   it("two bad 0G answers -> labelled deterministic fallback, never an unchecked number", async () => {

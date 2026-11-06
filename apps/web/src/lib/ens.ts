@@ -5,6 +5,7 @@ import { createPublicClient, getAddress, http, type PublicClient } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 import { normalize } from "viem/ens";
 import { usePublicConfig } from "./config";
+import ensManifest from "../../../../deployments/ens.json";
 
 /**
  * ENS reads (AGENT_B 3.2). Read-only, via viem against the network the API reports in /v1/config/public `ens.network`.
@@ -22,7 +23,8 @@ const DEFAULT_RPC: Record<Net, string> = {
 function client(net: Net): PublicClient {
   if (!clients[net]) {
     const chain = net === "sepolia" ? sepolia : mainnet;
-    clients[net] = createPublicClient({ chain, transport: http(process.env.NEXT_PUBLIC_ENS_RPC_URL || DEFAULT_RPC[net], { timeout: 8000 }) }) as PublicClient;
+    // multicall batching: a directory page resolves ~40 names x several records in a handful of RPC calls
+    clients[net] = createPublicClient({ chain, batch: { multicall: true }, transport: http(process.env.NEXT_PUBLIC_ENS_RPC_URL || DEFAULT_RPC[net], { timeout: 15000 }) }) as PublicClient;
   }
   return clients[net]!;
 }
@@ -78,6 +80,14 @@ export const DEMO_ENS_LABELS: Record<string, string> = {
   "0xdd0f57c26b23999240fd524ee43a4f918bba7415": "acme-cfo",
 };
 
+/** Candidate names from the org's ENS manifest (deployments/ens.json): people, clients, agents. Still forward-checked. */
+const MANIFEST_NAME: Record<string, string> = Object.fromEntries(
+  (ensManifest.names as unknown as Array<{ name: string; kind: string; addr?: string }>)
+    .filter((n) => n.addr && ["person", "client", "agent"].includes(n.kind))
+    .reverse() // first entry wins for a shared address (the agent over its signer key)
+    .map((n) => [n.addr!.toLowerCase(), n.name]),
+);
+
 /**
  * The name to show for an address: its primary name (reverse record) if set, else a candidate name
  * (from the API, or the demo label under the org's parent) that forward-resolves to this address. Never unverified.
@@ -87,7 +97,7 @@ export function useVerifiedEnsName(address: string | undefined, candidate?: stri
   const { data: cfg } = usePublicConfig();
   const parent = cfg?.ens?.parent_name;
   const label = address ? DEMO_ENS_LABELS[address.toLowerCase()] : undefined;
-  const guess = candidate ?? (label && parent ? `${label}.${parent}` : undefined);
+  const guess = candidate ?? (address ? MANIFEST_NAME[address.toLowerCase()] : undefined) ?? (label && parent ? `${label}.${parent}` : undefined);
   return useQuery({
     queryKey: ["ens-verified", net, address, guess],
     queryFn: async () => {
@@ -113,5 +123,30 @@ export function useEnsText(name: string | undefined, key: string) {
     enabled: !!net && !!name,
     staleTime: 10 * 60_000,
     retry: false,
+  });
+}
+
+/**
+ * Everything the directory shows for one name, resolved live: ETH address, optional multichain address
+ * (ENSIP-11 coin type, e.g. Arc testnet) and the given text records. Values are what ENS returns now,
+ * never what the manifest claims; the page compares the two.
+ */
+export function useEnsRecords(name: string | undefined, keys: string[], coinType?: number) {
+  const net = useNet();
+  return useQuery({
+    queryKey: ["ens-records", net, name, keys.join(","), coinType],
+    queryFn: async () => {
+      const c = client(net!);
+      const n = normalize(name!);
+      const [addr, coinAddr, ...texts] = await Promise.all([
+        soft(() => c.getEnsAddress({ name: n })),
+        coinType ? soft(() => c.getEnsAddress({ name: n, coinType })) : Promise.resolve(null),
+        ...keys.map((key) => soft(() => c.getEnsText({ name: n, key }))),
+      ]);
+      return { addr, coinAddr, text: Object.fromEntries(keys.map((k, i) => [k, texts[i]])) as Record<string, string | null> };
+    },
+    enabled: !!net && !!name,
+    staleTime: 5 * 60_000,
+    retry: 1,
   });
 }

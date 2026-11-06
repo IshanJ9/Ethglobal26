@@ -1,0 +1,568 @@
+{
+  "network": "sepolia",
+  "parent": "proofwork-demo.eth",
+  "resolver": "0xAc5525f895c9bf642527B476Ce28e80a37C45593",
+  "subregistry": "0xea57403fe8d91F526447481d79eA9E7504117b40",
+  "arc_coin_type": 2152525650,
+  "generated_at": "2026-11-06T17:44:16.285Z",
+  "names": [
+    {
+      "name": "proofwork-demo.eth",
+      "kind": "org",
+      "text": {
+        "description": "Acme Software Ltd: every bonus is earned from committed evidence, decided by verified humans and proven on chain.",
+        "url": "https://github.com/IshanJ9/Ethglobal26",
+        "org.name": "Acme Software Ltd",
+        "org.departments": "software.proofwork-demo.eth,sales.proofwork-demo.eth,marketing.proofwork-demo.eth,product.proofwork-demo.eth,people.proofwork-demo.eth",
+        "org.clusters": "ic.software.proofwork-demo.eth,senior.software.proofwork-demo.eth,ae.sales.proofwork-demo.eth,exec.marketing.proofwork-demo.eth,pm.product.proofwork-demo.eth",
+        "org.agents": "kra-agent.proofwork-demo.eth,review-agent.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "software.proofwork-demo.eth",
+      "kind": "department",
+      "text": {
+        "description": "Software Engineering department of Acme Software Ltd.",
+        "role": "department",
+        "head": "elena.proofwork-demo.eth",
+        "clusters": "ic.software.proofwork-demo.eth,senior.software.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "sales.proofwork-demo.eth",
+      "kind": "department",
+      "text": {
+        "description": "Sales department of Acme Software Ltd.",
+        "role": "department",
+        "head": "grace.proofwork-demo.eth",
+        "clusters": "ae.sales.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "marketing.proofwork-demo.eth",
+      "kind": "department",
+      "text": {
+        "description": "Marketing department of Acme Software Ltd.",
+        "role": "department",
+        "head": "isha.proofwork-demo.eth",
+        "clusters": "exec.marketing.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "product.proofwork-demo.eth",
+      "kind": "department",
+      "text": {
+        "description": "Product department of Acme Software Ltd.",
+        "role": "department",
+        "clusters": "pm.product.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "people.proofwork-demo.eth",
+      "kind": "department",
+      "text": {
+        "description": "People team (HR) department of Acme Software Ltd.",
+        "role": "department",
+        "head": "jon.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "ic.software.proofwork-demo.eth",
+      "kind": "cluster",
+      "text": {
+        "description": "Individual-contributor engineers (0-3 yrs). Delivery and review targets sized for IC scope.",
+        "role": "cluster",
+        "cluster": "software.ic",
+        "department": "software.proofwork-demo.eth",
+        "plan": "pln_eng_ic_v1",
+        "policy": "0x04af51ef292b72fea8ac11bd6a47791c577eba5f0cc65ff20f798630e3d41a1b",
+        "kras": "deliverables:3000,code_reviews:1500,service_cfr:2000,incident_sla:1500,bug_impact:1000,client_engagement:1000",
+        "members": "ben.proofwork-demo.eth,chen.proofwork-demo.eth,dev.proofwork-demo.eth,maya.proofwork-demo.eth,leo.proofwork-demo.eth,nora.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "senior.software.proofwork-demo.eth",
+      "kind": "cluster",
+      "text": {
+        "description": "Senior engineers. Higher delivery, review and incident expectations, more client exposure.",
+        "role": "cluster",
+        "cluster": "software.senior_ic",
+        "department": "software.proofwork-demo.eth",
+        "plan": "pln_eng_v1",
+        "policy": "0x0bc988716488032182947a427a84369cfca52438bfcdd6707bf285679ebf8d74",
+        "kras": "deliverables:3000,code_reviews:1500,service_cfr:2000,incident_sla:1500,bug_impact:1000,client_engagement:1000",
+        "members": "asha.proofwork-demo.eth,omar.proofwork-demo.eth,sara.proofwork-demo.eth,tom.proofwork-demo.eth,yuki.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "ae.sales.proofwork-demo.eth",
+      "kind": "cluster",
+      "text": {
+        "description": "Quota-carrying AEs. Tiered commission on closed-won, retention-adjusted.",
+        "role": "cluster",
+        "cluster": "sales.ic",
+        "department": "sales.proofwork-demo.eth",
+        "plan": "pln_sales_v1",
+        "policy": "0xf1e73ac20b8c445747d014e78c910b8d17942c34d5beb95bf5e72ca0dbd842b1",
+        "kras": "commission:tiered",
+        "members": "farid.proofwork-demo.eth,lena.proofwork-demo.eth,raj.proofwork-demo.eth,mia.proofwork-demo.eth,sam.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "exec.marketing.proofwork-demo.eth",
+      "kind": "cluster",
+      "text": {
+        "description": "Demand-gen executives. Pipeline, conversion, efficiency and campaign delivery.",
+        "role": "cluster",
+        "cluster": "marketing.ic",
+        "department": "marketing.proofwork-demo.eth",
+        "plan": "pln_mkt_v1",
+        "policy": "0x73684b9a2193afefe0f41cc9cfb9817f3ab4812bd2c745d75391c89478495730",
+        "kras": "sourced_pipeline:4000,mql_to_sql:2000,cost_per_sql:2000,campaign_milestones:2000",
+        "members": "hiro.proofwork-demo.eth,zoe.proofwork-demo.eth,ali.proofwork-demo.eth,eva.proofwork-demo.eth,kai.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "pm.product.proofwork-demo.eth",
+      "kind": "cluster",
+      "text": {
+        "description": "Product managers. Roadmap delivery, discovery, adoption, spec quality and CSAT.",
+        "role": "cluster",
+        "cluster": "product.ic",
+        "department": "product.proofwork-demo.eth",
+        "plan": "pln_product_v1",
+        "policy": "0x6534add3a4ed245958205ece8c4224dd00062faf758ee4f0ddc32094bceb37cb",
+        "kras": "roadmap_delivered:3000,discovery:1500,adoption:2500,spec_rework:1500,csat:1500",
+        "members": "priya.proofwork-demo.eth,marco.proofwork-demo.eth,hana.proofwork-demo.eth,ivan.proofwork-demo.eth,lucy.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "kra-agent.proofwork-demo.eth",
+      "kind": "agent",
+      "addr": "0x93a7931e4F6A1F124d438FA3fAB7E5d814A52A58",
+      "text": {
+        "role": "evidence-agent",
+        "description": "Proofwork evidence agent: collects from systems of record (git, tickets, CRM, HRIS); never computes or approves.",
+        "spec": "1.4.0",
+        "policy": "0x0bc988716488032182947a427a84369cfca52438bfcdd6707bf285679ebf8d74",
+        "url": "https://github.com/IshanJ9/Ethglobal26"
+      }
+    },
+    {
+      "name": "review-agent.proofwork-demo.eth",
+      "kind": "agent",
+      "text": {
+        "role": "review-agent",
+        "description": "Writes bonus-review reasoning inside 0G Private Computer from the encrypted evidence vault. Every number it writes is checked against the data packet.",
+        "model": "0gm-1.0-35b-a3b",
+        "provider": "0G Private Computer (TeeML)",
+        "prompt": "0x63fd5668e4bb9f30d95c1f677a7d0d75ee45082e8c666e0ad8d02cdcb419e140",
+        "rules": "numbers-from-packet-only; same-cluster-only; one-retry-then-labelled-fallback"
+      }
+    },
+    {
+      "name": "anchor.proofwork-demo.eth",
+      "kind": "signer",
+      "addr": "0x93a7931e4F6A1F124d438FA3fAB7E5d814A52A58",
+      "text": {
+        "role": "chain-signer",
+        "roles": "ANCHOR_ROLE,ATTESTER_ROLE",
+        "contract": "registry.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "payout.proofwork-demo.eth",
+      "kind": "signer",
+      "addr": "0x0351C881633238E0E900755b50BB9258cDC9EF54",
+      "text": {
+        "role": "chain-signer",
+        "roles": "PLANNER_ROLE,PAYOUT_ROLE,DISPUTER_ROLE,RESOLVER_ROLE",
+        "contract": "vault.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "registry.proofwork-demo.eth",
+      "kind": "contract",
+      "coin": {
+        "2152525650": "0x9ab5E0cc44b7336DE8306c9f2F91d7cC832d5112"
+      },
+      "text": {
+        "role": "contract",
+        "contract": "AttestationRegistry",
+        "chain": "arc-testnet:5042002",
+        "explorer": "https://explorer.testnet.arc.io/address/0x9ab5E0cc44b7336DE8306c9f2F91d7cC832d5112"
+      }
+    },
+    {
+      "name": "vault.proofwork-demo.eth",
+      "kind": "contract",
+      "coin": {
+        "2152525650": "0x3FE940C4F1464d769795d24157037BEf7C3ec97F"
+      },
+      "text": {
+        "role": "contract",
+        "contract": "BonusVault",
+        "chain": "arc-testnet:5042002",
+        "asset": "USDC",
+        "explorer": "https://explorer.testnet.arc.io/address/0x3FE940C4F1464d769795d24157037BEf7C3ec97F"
+      }
+    },
+    {
+      "name": "asha.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xe0A6B36D1381B1844A569acecde5501cA3Aca9c1",
+      "text": {
+        "name": "Asha Rao",
+        "title": "Senior Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "senior.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "ben.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xDD9BF67e531Cc092D3695381B060B93cae557035",
+      "text": {
+        "name": "Ben Carter",
+        "title": "Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "ic.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "chen.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xC14372935dD977Eace9b673c4d21Fb466f9Cc025",
+      "text": {
+        "name": "Chen Wei",
+        "title": "Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "ic.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "elena.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x533cD3D69794436c3BF8ef0F1Eca50f3782dBbFa",
+      "text": {
+        "name": "Elena Park",
+        "title": "Software manager",
+        "department": "software.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "farid.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x0080219E7Db838dd56C24c5E96F547D08DfAD352",
+      "text": {
+        "name": "Farid Khan",
+        "title": "Account Executive",
+        "department": "sales.proofwork-demo.eth",
+        "cluster": "ae.sales.proofwork-demo.eth",
+        "manager": "grace.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "grace.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x44D6852BD76d643575563ef1078d87db58C3d0D6",
+      "text": {
+        "name": "Grace Lee",
+        "title": "Sales manager",
+        "department": "sales.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "hiro.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x2dF3fABb156F51615aB02AC214482a1dBDAFa35e",
+      "text": {
+        "name": "Hiro Tanaka",
+        "title": "Marketing Executive",
+        "department": "marketing.proofwork-demo.eth",
+        "cluster": "exec.marketing.proofwork-demo.eth",
+        "manager": "isha.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "isha.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x75C989274262d545B872F298B1173951A97af8fD",
+      "text": {
+        "name": "Isha Mehta",
+        "title": "Marketing manager",
+        "department": "marketing.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "dev.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x1b3f6Dd776fAc02d1bcB952c3590A2ecF5217Fb4",
+      "text": {
+        "name": "Dev Patel",
+        "title": "Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "ic.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "maya.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x1D5Be0D40CEd746f86c294956AdCC2A4fC18feFe",
+      "text": {
+        "name": "Maya Singh",
+        "title": "Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "ic.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "leo.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xA904dAc274296E5d1ea3069C37104991FfDb0b32",
+      "text": {
+        "name": "Leo Fischer",
+        "title": "Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "ic.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "nora.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x22a70c9E21c02eee82fD0396Ed736Cc680BEA7a1",
+      "text": {
+        "name": "Nora Kim",
+        "title": "Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "ic.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "omar.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xc51D8A8f4b36f55043C28A9acE42F6eb6dd2a2ef",
+      "text": {
+        "name": "Omar Haddad",
+        "title": "Senior Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "senior.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "sara.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x1c280794a25f319Ad7dfC2c1afc70b18361fFD5D",
+      "text": {
+        "name": "Sara Lopez",
+        "title": "Senior Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "senior.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "tom.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x05067f5Be17E1445e182e3d11ABE7bA88646c8Bd",
+      "text": {
+        "name": "Tom Becker",
+        "title": "Senior Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "senior.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "yuki.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x311271Bd307aFEaDFBF42667Eaae4D16a55bA5d9",
+      "text": {
+        "name": "Yuki Sato",
+        "title": "Senior Software Engineer",
+        "department": "software.proofwork-demo.eth",
+        "cluster": "senior.software.proofwork-demo.eth",
+        "manager": "elena.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "lena.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x11e4B5789e942Af4009307e6e705AC7041DEFe9F",
+      "text": {
+        "name": "Lena Novak",
+        "title": "Account Executive",
+        "department": "sales.proofwork-demo.eth",
+        "cluster": "ae.sales.proofwork-demo.eth",
+        "manager": "grace.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "raj.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x9Aa2caa070e52ebDCe1Fc3027B8c68EA6EeD3066",
+      "text": {
+        "name": "Raj Iyer",
+        "title": "Account Executive",
+        "department": "sales.proofwork-demo.eth",
+        "cluster": "ae.sales.proofwork-demo.eth",
+        "manager": "grace.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "mia.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x1B2a7a4CAAE1c3A11F6E3e8f51aD7C954Baa7193",
+      "text": {
+        "name": "Mia Rossi",
+        "title": "Account Executive",
+        "department": "sales.proofwork-demo.eth",
+        "cluster": "ae.sales.proofwork-demo.eth",
+        "manager": "grace.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "sam.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xb4666842895640C9aB6B0831A59AC593f64Ff3Cc",
+      "text": {
+        "name": "Sam Okafor",
+        "title": "Account Executive",
+        "department": "sales.proofwork-demo.eth",
+        "cluster": "ae.sales.proofwork-demo.eth",
+        "manager": "grace.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "zoe.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xe4284FC1085D70bE7812619a5f3893277cF6D2Db",
+      "text": {
+        "name": "Zoe Martin",
+        "title": "Marketing Executive",
+        "department": "marketing.proofwork-demo.eth",
+        "cluster": "exec.marketing.proofwork-demo.eth",
+        "manager": "isha.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "ali.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x57b5D7D7A58C6c3A334995C4B616bA745e7dfAb1",
+      "text": {
+        "name": "Ali Hassan",
+        "title": "Marketing Executive",
+        "department": "marketing.proofwork-demo.eth",
+        "cluster": "exec.marketing.proofwork-demo.eth",
+        "manager": "isha.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "eva.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x1fEfE74111DD12808F65222c4da3800911250737",
+      "text": {
+        "name": "Eva Berg",
+        "title": "Marketing Executive",
+        "department": "marketing.proofwork-demo.eth",
+        "cluster": "exec.marketing.proofwork-demo.eth",
+        "manager": "isha.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "kai.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xDBdD8B73116aC453Ca80fb4dD5C16Ab011158923",
+      "text": {
+        "name": "Kai Wong",
+        "title": "Marketing Executive",
+        "department": "marketing.proofwork-demo.eth",
+        "cluster": "exec.marketing.proofwork-demo.eth",
+        "manager": "isha.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "priya.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x3F0A728F3bE62de603efA66150637dB892123251",
+      "text": {
+        "name": "Priya Nair",
+        "title": "Product Manager",
+        "department": "product.proofwork-demo.eth",
+        "cluster": "pm.product.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "marco.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xe4a4a5b2a372605aeFef0bb9367E81767a4AdDCD",
+      "text": {
+        "name": "Marco Silva",
+        "title": "Product Manager",
+        "department": "product.proofwork-demo.eth",
+        "cluster": "pm.product.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "hana.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0xAB613373230Cd1624eDd00ac9c65Ba5a8Ac48639",
+      "text": {
+        "name": "Hana Ito",
+        "title": "Product Manager",
+        "department": "product.proofwork-demo.eth",
+        "cluster": "pm.product.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "ivan.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x9383A3A5Cd77160f5ba4E2ecf7B47C1Da355DA77",
+      "text": {
+        "name": "Ivan Petrov",
+        "title": "Product Manager",
+        "department": "product.proofwork-demo.eth",
+        "cluster": "pm.product.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "lucy.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x7Ddc539c2fF9d74570caBd1E1174e01B3b133456",
+      "text": {
+        "name": "Lucy Grant",
+        "title": "Product Manager",
+        "department": "product.proofwork-demo.eth",
+        "cluster": "pm.product.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "jon.proofwork-demo.eth",
+      "kind": "person",
+      "addr": "0x148e33e153c6c93bC91CAC71D16487B93c52abD7",
+      "text": {
+        "name": "Jon Ruiz",
+        "title": "HR business partner",
+        "department": "people.proofwork-demo.eth"
+      }
+    },
+    {
+      "name": "acme-cfo.proofwork-demo.eth",
+      "kind": "client",
+      "addr": "0xDD0F57c26b23999240Fd524Ee43a4f918BbA7415",
+      "text": {
+        "name": "Karan Shah (CFO, Acme Bank)",
+        "title": "CFO, Acme Bank (client)",
+        "org": "Acme Bank"
+      }
+    }
+  ]
+}

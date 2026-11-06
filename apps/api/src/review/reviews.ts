@@ -17,11 +17,15 @@ import { HISTORY_KIND, type ContextService } from "./context.ts";
 import { allowedNumbers, buildPacket, checkNumbers, parseReasoning, reasoningHash, SYSTEM_PROMPT, templateReasoning, type Reasoner, type Reasoning } from "./reasoning.ts";
 import { percentileBps, rankDesc, zMilli, distStats } from "./stats.ts";
 import type { VaultReader } from "./vault.ts";
+import { consumeNullifier, worldResultHash, type WorldResult, type WorldVerifier } from "../world/verifier.ts";
 
 export type Review = components["schemas"]["Review"];
 export type ReviewSummary = components["schemas"]["ReviewSummary"];
 
 const REVIEW_BATCH_BASE = 1_000_000_000; // review anchors never collide with evidence batch ids
+/** World ID actions (create both in the World Developer Portal). Signal = the review hash. */
+export const ANCHOR_WORLD_ACTION = "pw-anchor-review";
+export const ACK_WORLD_ACTION = "pw-ack-review";
 
 export class ReviewService {
   constructor(
@@ -33,6 +37,7 @@ export class ReviewService {
     private readonly vault: VaultReader,
     private readonly reasoner: Reasoner | null,
     private readonly chain: ChainClient,
+    private readonly world: WorldVerifier,
     private readonly audit: AuditRepo,
     private readonly config: Config,
     private readonly clock: Clock,
@@ -132,9 +137,9 @@ export class ReviewService {
             lastErr = parsed.error;
             continue;
           }
-          check = checkNumbers(parsed.value, allowed, attempt);
+          check = checkNumbers(parsed.value, allowed, attempt, packet);
           if (!check.passed) {
-            lastErr = `these numbers are not in the packet: ${check.unsupported.slice(0, 12).join(", ")}`;
+            lastErr = `these numbers or claims are not supported by the packet: ${check.unsupported.slice(0, 12).join(", ")}`;
             continue;
           }
           got = parsed.value;
@@ -151,12 +156,12 @@ export class ReviewService {
         reasoning = templateReasoning(packet, pctl, kraEvidence, historyIds);
         source = "deterministic_fallback";
         fallback_reason = lastErr || "0G reasoning unavailable";
-        number_check = { ...checkNumbers(reasoning, allowed, attempt), attempts: attempt };
+        number_check = { ...checkNumbers(reasoning, allowed, attempt, packet), attempts: attempt };
       }
     } else {
       reasoning = templateReasoning(packet, pctl, kraEvidence, historyIds);
       source = "mock";
-      number_check = checkNumbers(reasoning, allowed, 0);
+      number_check = checkNumbers(reasoning, allowed, 0, packet);
     }
 
     const output_hash = reasoningHash(reasoning);
@@ -199,6 +204,13 @@ export class ReviewService {
       number_check,
       hashes,
       anchor: null,
+      acknowledgement: null,
+      world_actions: { anchor: ANCHOR_WORLD_ACTION, acknowledge: ACK_WORLD_ACTION, signal: hashes.review_hash },
+      reasoning_agent: {
+        ens_name: this.config.ENS_PARENT_NAME ? `review-agent.${this.config.ENS_PARENT_NAME}` : null,
+        system_prompt_hash: keccakUtf8(SYSTEM_PROMPT),
+        model: inference?.model ?? (source === "mock" ? "deterministic-writer" : "deterministic-fallback"),
+      },
       created_by: viewer.persona_id,
       created_at: iso(this.clock.now()),
     };
@@ -220,13 +232,51 @@ export class ReviewService {
     return review;
   }
 
-  private row(id: string): { review_json: string; anchor_json: string | null; employee_id: string } | undefined {
-    return this.db.prepare("SELECT review_json, anchor_json, employee_id FROM reviews WHERE review_id = ?").get(id) as any;
+  private row(id: string): { review_json: string; anchor_json: string | null; ack_json: string | null; employee_id: string } | undefined {
+    return this.db.prepare("SELECT review_json, anchor_json, ack_json, employee_id FROM reviews WHERE review_id = ?").get(id) as any;
   }
 
-  private hydrate(r: { review_json: string; anchor_json: string | null }): Review {
+  private hydrate(r: { review_json: string; anchor_json: string | null; ack_json?: string | null }): Review {
     const v = JSON.parse(r.review_json) as Review;
-    return { ...v, anchor: r.anchor_json ? JSON.parse(r.anchor_json) : null };
+    return {
+      ...v,
+      anchor: r.anchor_json ? JSON.parse(r.anchor_json) : null,
+      acknowledgement: r.ack_json ? JSON.parse(r.ack_json) : null,
+      world_actions: v.world_actions ?? { anchor: ANCHOR_WORLD_ACTION, acknowledge: ACK_WORLD_ACTION, signal: v.hashes.review_hash },
+      reasoning_agent: v.reasoning_agent ?? {
+        ens_name: this.config.ENS_PARENT_NAME ? `review-agent.${this.config.ENS_PARENT_NAME}` : null,
+        system_prompt_hash: keccakUtf8(SYSTEM_PROMPT),
+        model: v.inference?.model ?? "deterministic-writer",
+      },
+    };
+  }
+
+  /** World ID check bound to (action, review hash); the nullifier is consumed so a proof works once. */
+  private async worldCheck(viewer: Persona, action: string, review: Review, result: WorldResult | undefined, at: string): Promise<{ nullifier: string; wrh: string }> {
+    const chk = await this.world.verify({ action, signal: review.hashes.review_hash, result });
+    if (!chk.ok) {
+      this.audit.append(at, viewer.persona_id, "review.world_failed", review.review_id, { action, reason: chk.reason });
+      throw new ApiError(401, "world_verification_failed", `World verification failed: ${chk.reason}`);
+    }
+    return { nullifier: chk.nullifier, wrh: worldResultHash(result!) };
+  }
+
+  /** The reviewed employee confirms, with World ID, that they received exactly this review (once). */
+  async acknowledge(viewer: Persona, id: string, worldResult: WorldResult | undefined): Promise<Review> {
+    const r = this.row(id);
+    if (!r || !isInternal(viewer) || !canView(viewer, this.org.employee(r.employee_id))) throw errors.notFound("Review not found");
+    if (viewer.employee_id !== r.employee_id) throw errors.forbidden("Only the reviewed employee can acknowledge their review");
+    const review = this.hydrate(r);
+    if (review.acknowledgement) throw errors.invalidState("Review already acknowledged");
+    const at = iso(this.clock.now());
+    const { nullifier, wrh } = await this.worldCheck(viewer, ACK_WORLD_ACTION, review, worldResult, at);
+    const ack = { acknowledged_by: viewer.employee_id, acknowledged_at: at, world_result_hash: wrh, world_mode: this.world.mode };
+    this.db.transaction(() => {
+      if (!consumeNullifier(this.db, nullifier, `${ACK_WORLD_ACTION}:${id}`, at)) throw new ApiError(401, "world_verification_failed", "World proof was already used (replay)");
+      this.db.prepare("UPDATE reviews SET ack_json = ? WHERE review_id = ?").run(JSON.stringify(ack), id);
+      this.audit.append(at, viewer.persona_id, "review.acknowledged", id, { review_hash: review.hashes.review_hash, world_result_hash: wrh });
+    })();
+    return { ...review, acknowledgement: ack };
   }
 
   get(viewer: Persona, id: string): Review {
@@ -238,8 +288,8 @@ export class ReviewService {
   list(viewer: Persona, f: { employeeId?: string; cycleId?: string }): ReviewSummary[] {
     if (!isInternal(viewer)) throw errors.forbidden("Not available to external co-signers");
     const rows = this.db
-      .prepare(`SELECT review_json, anchor_json, employee_id FROM reviews WHERE (? IS NULL OR employee_id = ?) AND (? IS NULL OR cycle_id = ?) ORDER BY created_at DESC LIMIT 200`)
-      .all(f.employeeId ?? null, f.employeeId ?? null, f.cycleId ?? null, f.cycleId ?? null) as Array<{ review_json: string; anchor_json: string | null; employee_id: string }>;
+      .prepare(`SELECT review_json, anchor_json, ack_json, employee_id FROM reviews WHERE (? IS NULL OR employee_id = ?) AND (? IS NULL OR cycle_id = ?) ORDER BY created_at DESC LIMIT 200`)
+      .all(f.employeeId ?? null, f.employeeId ?? null, f.cycleId ?? null, f.cycleId ?? null) as Array<{ review_json: string; anchor_json: string | null; ack_json: string | null; employee_id: string }>;
     return rows
       .filter((r) => canView(viewer, this.org.employee(r.employee_id)))
       .map((r) => {
@@ -256,23 +306,30 @@ export class ReviewService {
           reasoning_source: v.reasoning_source,
           review_hash: v.hashes.review_hash,
           anchor_tx_hash: v.anchor?.tx_hash ?? null,
+          acknowledged: !!v.acknowledgement,
           created_at: v.created_at,
         };
       });
   }
 
   /** HR anchors the review hash with anchorBatch(review_hash, id >= 1e9, 1). Idempotent. */
-  async anchor(viewer: Persona, id: string): Promise<Review> {
+  async anchor(viewer: Persona, id: string, worldResult?: WorldResult): Promise<Review> {
     if (!isHr(viewer)) throw errors.forbidden("Only HR can anchor a review");
     // Under the chain lock, and re-read inside it, so a double click cannot anchor twice.
-    return this.exclusive(() => this.anchorNow(viewer, id));
+    return this.exclusive(() => this.anchorNow(viewer, id, worldResult));
   }
 
-  private async anchorNow(viewer: Persona, id: string): Promise<Review> {
+  private async anchorNow(viewer: Persona, id: string, worldResult?: WorldResult): Promise<Review> {
     const r = this.row(id);
     if (!r) throw errors.notFound("Review not found");
     const review = this.hydrate(r);
     if (review.anchor) return review;
+    // World ID step-up: a real, unique human signs off before the review hash goes on chain.
+    const stepAt = iso(this.clock.now());
+    const { nullifier, wrh } = await this.worldCheck(viewer, ANCHOR_WORLD_ACTION, review, worldResult, stepAt);
+    if (!consumeNullifier(this.db, nullifier, `${ANCHOR_WORLD_ACTION}:${id}`, stepAt)) {
+      throw new ApiError(401, "world_verification_failed", "World proof was already used (replay)");
+    }
     const used = (this.db.prepare("SELECT COUNT(*) FROM reviews WHERE anchor_json IS NOT NULL").pluck().get() as number) ?? 0;
     let numeric = REVIEW_BATCH_BASE + used + 1;
     const zero = "0x" + "00".repeat(32);
@@ -285,6 +342,8 @@ export class ReviewService {
       chain_mode: this.chain.mode,
       explorer_url: this.chain.mode === "live" && base ? `${base}/tx/${txHash}` : null,
       anchored_at: iso(this.clock.now()),
+      anchored_by: viewer.persona_id,
+      world_result_hash: wrh,
     };
     this.db.prepare("UPDATE reviews SET anchor_json = ? WHERE review_id = ?").run(JSON.stringify(anchor), id);
     this.audit.append(anchor.anchored_at, viewer.persona_id, "review.anchored", id, { review_hash: review.hashes.review_hash, numeric_batch_id: numeric, tx_hash: txHash, chain_mode: this.chain.mode });

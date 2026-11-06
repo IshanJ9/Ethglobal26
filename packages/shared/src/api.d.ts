@@ -816,8 +816,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description HR anchors the review hash on chain (registry anchorBatch, count 1, batch ids >= 1e9) so the reasoning shown in the bonus review is provably the one produced from the committed data. */
+        /** @description HR anchors the review hash on chain (registry anchorBatch, count 1, batch ids >= 1e9) so the reasoning shown in the bonus review is provably the one produced from the committed data. Requires a World ID step-up (action pw-anchor-review, signal = review_hash): a real, unique human signs off. */
         post: operations["anchorReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/{review_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The employee confirms with World ID (action pw-ack-review, signal = review_hash) that they received exactly this review. Only the reviewed employee; once; replayed proofs are rejected. */
+        post: operations["acknowledgeReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1586,6 +1603,7 @@ export interface components {
             reasoning_source: "0g_private_computer" | "deterministic_fallback" | "mock";
             review_hash: components["schemas"]["Bytes32"];
             anchor_tx_hash?: string | null;
+            acknowledged?: boolean;
             created_at: components["schemas"]["Timestamp"];
         };
         Review: {
@@ -1627,6 +1645,26 @@ export interface components {
                 chain_mode: "live" | "mock";
                 explorer_url?: string | null;
                 anchored_at: components["schemas"]["Timestamp"];
+                anchored_by?: string;
+                world_result_hash?: string | null;
+            };
+            acknowledgement?: null | {
+                acknowledged_by: string;
+                acknowledged_at: components["schemas"]["Timestamp"];
+                world_result_hash: string;
+                /** @enum {string} */
+                world_mode: "live" | "mock";
+            };
+            world_actions?: {
+                anchor: string;
+                acknowledge: string;
+                signal: components["schemas"]["Bytes32"];
+            };
+            reasoning_agent?: {
+                /** @description ENS name whose `prompt` text record must equal system_prompt_hash */
+                ens_name: string | null;
+                system_prompt_hash: components["schemas"]["Bytes32"];
+                model: string;
             };
             created_by: string;
             created_at: components["schemas"]["Timestamp"];
@@ -2938,7 +2976,13 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    world_result?: components["schemas"]["WorldResult"];
+                };
+            };
+        };
         responses: {
             /** @description ok */
             200: {
@@ -2949,6 +2993,38 @@ export interface operations {
                     "application/json": components["schemas"]["Review"];
                 };
             };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    acknowledgeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    world_result: components["schemas"]["WorldResult"];
+                };
+            };
+        };
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Review"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
         };

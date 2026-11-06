@@ -9,6 +9,22 @@ import { formatBps, formatUsdc } from "@/lib/format";
 import { useClusterBoard, useClusters, useCurrentCycle } from "@/lib/queries";
 import { ActorTag, Button, Card, Empty, ErrorNote, HashPill, Loading, PageTitle, Stat } from "@/components/ui";
 import { DistStrip, pctPpm, zText } from "@/components/review";
+import { useEnsText } from "@/lib/ens";
+import manifest from "../../../../../deployments/ens.json";
+
+/** ENS: each cluster publishes its plan's formula hash in the `policy` text record of its name. */
+function PolicyOnEns({ clusterId, formulaHash }: { clusterId: string; formulaHash: string }) {
+  const entry = (manifest.names as unknown as Array<{ name: string; kind: string; text: Record<string, string> }>).find((n) => n.kind === "cluster" && n.text.cluster === clusterId);
+  const policy = useEnsText(entry?.name, "policy");
+  if (!entry) return null;
+  const ok = policy.data ? policy.data.toLowerCase() === formulaHash.toLowerCase() : null;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      plan published at <span className="rounded-full bg-chain/10 px-2 py-0.5 font-mono font-semibold text-chain">{entry.name}</span>
+      {policy.isLoading ? "(resolving…)" : ok ? <span className="text-chain">✓ ENS policy = formula hash</span> : ok === false ? <span className="text-danger">✗ ENS policy differs from this plan</span> : <span className="text-muted">(not on ENS yet)</span>}
+    </span>
+  );
+}
 
 function ClustersInner() {
   const me = useRequireSession();
@@ -85,6 +101,7 @@ function ClustersInner() {
                 <span>Plan <span className="font-medium text-ink">{b.cluster.plan_name}</span></span>
                 <span>formula <HashPill value={b.formula_hash} /></span>
                 <span>board hash <HashPill value={b.board_hash} /></span>
+                <PolicyOnEns clusterId={b.cluster.cluster_id} formulaHash={b.formula_hash} />
               </p>
             </div>
           </Card>
