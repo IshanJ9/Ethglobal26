@@ -1,7 +1,7 @@
 # API notes (`apps/api`, Agent A)
 
 What the backend does, what is real and what is mocked, how to run and check it, and its known limits.
-Spec version **1.0.0**. Last updated Sat 7 Nov 2026 (IST).
+Spec version **1.0.0**. Last updated Fri 6 Nov 2026 (IST).
 
 > **Agents collect, code computes, humans decide, chain proves.** No model output is ever a number in a score;
 > no scorecard is attested without an approved human approval; nothing is paid without an attestation.
@@ -26,15 +26,31 @@ labelled by the modes in `/v1/config/public`.
 
 ```bash
 pnpm install
-pnpm --filter @proofwork/api keys:gen      # first time only: writes apps/api/.env (gitignored), prints role addresses
+pnpm --filter @proofwork/api keys:gen      # optional: writes apps/api/.env (gitignored) with real secrets + role keys
 pnpm --filter @proofwork/api seed:reset    # wipe DB + replicas, load org/plans/cycles (stop the API first)
 pnpm dev                                   # API on :8787 (+ web on :3000)
 ```
 
+On a fresh clone with no `apps/api/.env`, the API falls back to the repo's `.env.example` (outside production
+only) and prints a warning: those are public **test placeholders**, fine for the mock demo and nothing else. A fresh
+clone runs `pnpm install --frozen-lockfile && pnpm --filter @proofwork/api seed:reset && pnpm dev` with no other
+setup (checked on Fri 6 Nov: spec:check, 102 tests and the HTTP e2e story all green in a clean clone).
+
+Optional variables the API also reads (all have defaults; not in the frozen `.env.example`):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NODE_ENV` | `development` | `production` disables response validation and the `.env.example` fallback, forbids `WEB_ORIGIN=*` |
+| `HOST` | `0.0.0.0` | listen address |
+| `WEB_ORIGIN` | `http://localhost:3000` | CORS allow-list (comma-separated); named in INTEGRATION 3 |
+| `LOG_LEVEL` | `info` | pino level |
+| `RATE_LIMIT_PER_MIN` | `600` | global per-IP budget (route limits are capped by it) |
+| `WORLD_ENVIRONMENT` | `production` | expected World environment in `WORLD_MODE=live` (`staging` for the simulator) |
+
 | Command | Proves |
 |---|---|
 | `pnpm spec:check` | spec, fixtures, vectors (JS + Python + TS crypto), ABIs, generated types are consistent |
-| `pnpm --filter @proofwork/api test` | 100+ tests: engine vs vectors and seed expectations, contract guard, claims F1, approvals, chain behaviour, verify, negative tests n01-n18, resilience |
+| `pnpm --filter @proofwork/api test` | 102 tests: engine vs vectors and seed expectations, contract guard, claims F1, approvals, chain behaviour, verify, negative tests n01-n18, resilience |
 | `pnpm e2e:demo` | full story s1 -> c1 -> v1 attest/release -> deny path -> s3 revert -> v2 + applyRevision -> s4 carry-forward -> shred, every number checked against the fixtures (in-process, ~1-2 s). `E2E_BASE_URL=http://localhost:8787` runs it against a server |
 | `pnpm --filter @proofwork/api demo:script [--live]` | prints the exact click order, ids and expected numbers for the demo video |
 | `pnpm --filter @proofwork/api chain:probe` | (live) chain id, roles granted to our two keys, asset decimals, cycle balances, gas |

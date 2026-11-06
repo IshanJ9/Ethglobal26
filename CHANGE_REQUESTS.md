@@ -41,7 +41,7 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Merged in:
 
 ### CR-002  Optional World RP context on Approval and CosignView (U1 trigger)
-- Proposer: A        Date/time (IST): Sat 7 Nov 2026
+- Proposer: A        Date/time (IST): Fri 6 Nov 2026
 - Kind: additive
 - Problem: World ID 4.0 (docs.world.org, Nov 2026) verifies proofs at `POST https://developer.world.org/api/v4/verify/{rp_id}` and requires the IDKit request to carry an RP-signed context (`rp_context`: `rp_id`, `nonce`, `created_at`, `expires_at`, `signature`) produced server-side with the signing key ("Never generate RP signatures on the client"). `Approval` and `CosignView` only expose `world_action` + `challenge`/digest, so the web client has no server-signed context to pass to IDKit in `WORLD_MODE=live`. This is the pre-registered U1 CR.
 - Proposal: `spec/openapi.yaml`: add optional `world_rp_context: { type: object, additionalProperties: true, description: "Opaque RP context for IDKit (WORLD_MODE=live only); pass through unchanged." }` to `Approval` and `CosignView`. Populated by A when `WORLD_MODE=live`; absent in mock.

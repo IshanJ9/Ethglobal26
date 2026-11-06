@@ -76,8 +76,21 @@ function cleanEnv(env: NodeJS.ProcessEnv): Record<string, string | undefined> {
   return out;
 }
 
+/**
+ * Loads apps/api/.env. On a fresh clone (no .env) outside production, falls back to the repo-root
+ * .env.example so `pnpm install && seed:reset && pnpm dev` works with mocks out of the box; those values
+ * are public TEST placeholders, never use them for anything real (run `keys:gen` for your own).
+ */
 export function loadEnvFile(path = join(API_DIR, ".env")): void {
-  if (existsSync(path)) process.loadEnvFile(path);
+  if (existsSync(path)) {
+    process.loadEnvFile(path);
+    return;
+  }
+  const example = join(REPO_ROOT, ".env.example");
+  if (process.env.NODE_ENV !== "production" && existsSync(example)) {
+    process.loadEnvFile(example);
+    console.warn("[proofwork] apps/api/.env not found: using .env.example TEST placeholders (mock mode). Run `pnpm --filter @proofwork/api keys:gen` for real secrets.");
+  }
 }
 
 export function parseConfig(env: NodeJS.ProcessEnv = process.env): Config {
