@@ -97,7 +97,7 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   if (o.reasoner === undefined && config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL) {
     reasoner = new ZeroGReasoner(config.ZEROG_BASE_URL, config.ZEROG_API_KEY, config.ZEROG_MODEL, clock);
   }
-  const reviews = new ReviewService(db, org, evidence, clusters, contextSvc, vault, reasoner, chain, audit, config, clock, log);
+  const reviews = new ReviewService(db, org, evidence, clusters, contextSvc, vault, reasoner, chain, audit, config, clock, log, (fn) => chainSvc.exclusive(fn));
 
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,

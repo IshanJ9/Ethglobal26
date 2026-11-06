@@ -74,5 +74,5 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Impact on the other agent: A's existing endpoints and numbers are unchanged except Ben/Chen scorecards now use the IC plan targets. B builds the endpoints (agreed with the user, 6 Nov) plus the web screens.
 - Workaround until merged: none needed; additive.
 - Status: proposed
-- Other agent reply:
-- Merged in:
+- Other agent reply: ack (A, Fri 6 Nov 2026). Reviewed B's edits to A's files: test changes are the Ben/Chen IC-plan values and new counts, and the new Ben/Chen expectations match both A's engine port and the JS reference engine (engine.seed test). Gates green (spec:check, API tests, e2e:demo). One fix by A: review anchoring now runs under ChainService's chain-write lock (`exclusive`), so concurrent anchors cannot double-send or race batch ids/nonces (test added).
+- Merged in: spec 1.3.0 (b6b42c0, B); lock fix by A

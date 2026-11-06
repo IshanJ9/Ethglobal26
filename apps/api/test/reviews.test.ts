@@ -150,6 +150,25 @@ describe("reviews (layer 3)", () => {
     expectNoViolations(app);
   });
 
+  it("concurrent anchor calls for one review send one transaction (shared chain-write lock)", async () => {
+    const { app, hr } = await populated(null);
+    const v = (await app.inject({ method: "POST", url: "/v1/reviews", headers: hr, payload: { employee_id: "emp_dev_b", cycle_id: C1, peer_employee_id: "emp_ic_dev" } })).json();
+    // A real chain is slow: make each read/write take a moment so the two requests genuinely overlap.
+    const chain = app.svc.chain as any;
+    for (const m of ["batchRoot", "anchorBatch"]) {
+      const orig = chain[m].bind(chain);
+      chain[m] = async (...args: unknown[]) => (await new Promise((r) => setTimeout(r, 25)), orig(...args));
+    }
+    const [a, b] = await Promise.all([
+      app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr }),
+      app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/anchor`, headers: hr }),
+    ]);
+    expect([a.statusCode, b.statusCode]).toEqual([200, 200]);
+    expect(b.json().anchor.tx_hash).toBe(a.json().anchor.tx_hash);
+    expect(b.json().anchor.numeric_batch_id).toBe(a.json().anchor.numeric_batch_id);
+    expect(await app.svc.chain.batchRoot(BigInt(a.json().anchor.numeric_batch_id + 1))).toBe("0x" + "00".repeat(32));
+  });
+
   it("never compares across clusters (IC vs Senior -> 409 cluster_mismatch)", async () => {
     const { app, hr } = await populated(null);
     const r = await app.inject({ method: "POST", url: "/v1/reviews", headers: hr, payload: { employee_id: "emp_dev_b", cycle_id: C1, peer_employee_id: "emp_dev_a" } });

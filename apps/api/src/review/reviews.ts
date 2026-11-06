@@ -37,6 +37,8 @@ export class ReviewService {
     private readonly config: Config,
     private readonly clock: Clock,
     private readonly log: (m: string, d?: Record<string, unknown>) => void = () => {},
+    /** Shared chain-write lock (ChainService.exclusive): one sender, no batch-id or nonce races. */
+    private readonly exclusive: <T>(fn: () => Promise<T>) => Promise<T> = (fn) => fn(),
   ) {}
 
   private canCreate(viewer: Persona, e: Employee) {
@@ -262,6 +264,11 @@ export class ReviewService {
   /** HR anchors the review hash with anchorBatch(review_hash, id >= 1e9, 1). Idempotent. */
   async anchor(viewer: Persona, id: string): Promise<Review> {
     if (!isHr(viewer)) throw errors.forbidden("Only HR can anchor a review");
+    // Under the chain lock, and re-read inside it, so a double click cannot anchor twice.
+    return this.exclusive(() => this.anchorNow(viewer, id));
+  }
+
+  private async anchorNow(viewer: Persona, id: string): Promise<Review> {
     const r = this.row(id);
     if (!r) throw errors.notFound("Review not found");
     const review = this.hydrate(r);

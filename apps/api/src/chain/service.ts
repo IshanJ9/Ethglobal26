@@ -36,6 +36,11 @@ export class ChainService {
 
   /** Chain writes run one at a time per process (no batch-id or supersede races on double clicks). */
   private queue: Promise<unknown> = Promise.resolve();
+  /** Runs fn under the same per-process chain-write lock (for chain writes made outside this service). */
+  exclusive<T>(fn: () => Promise<T>): Promise<T> {
+    return this.serial(fn);
+  }
+
   private serial<T>(fn: () => Promise<T>): Promise<T> {
     const run = this.queue.then(fn, fn);
     this.queue = run.catch(() => {});
