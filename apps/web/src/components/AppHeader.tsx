@@ -22,9 +22,26 @@ export function AppHeader() {
     <header className="border-b border-line bg-paper">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 pb-3 pt-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <Link href="/" className="font-display text-2xl font-bold tracking-tight">
-            Proofwork
-          </Link>
+          <div className="flex items-baseline gap-6">
+            <Link href="/" className="font-display text-2xl font-bold tracking-tight">
+              Proofwork
+            </Link>
+            {session && session.persona.role !== "external_cosigner" ? (
+              <nav className="flex gap-4 text-sm">
+                <Link href="/" className="text-muted hover:text-ink">My cycle</Link>
+                <Link href="/claims/new" className="text-muted hover:text-ink">New claim</Link>
+                {session.persona.role === "manager" || session.persona.role === "hr" ? (
+                  <Link href="/team" className="text-muted hover:text-ink">Team</Link>
+                ) : null}
+                <Link href="/verify" className="text-muted hover:text-ink">Verify</Link>
+                <Link href="/demo" className="text-muted hover:text-ink">Demo</Link>
+              </nav>
+            ) : (
+              <nav className="flex gap-4 text-sm">
+                <Link href="/verify" className="text-muted hover:text-ink">Verify</Link>
+              </nav>
+            )}
+          </div>
           {session ? (
             <div className="flex items-center gap-3 text-sm">
               <span className="flex flex-col items-end leading-tight">

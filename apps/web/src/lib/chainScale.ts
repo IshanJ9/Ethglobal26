@@ -11,7 +11,7 @@ export const LIVE_DIVISOR_FALLBACK = 10000;
 
 export function chainAmountDivisor(cfg: PublicConfig | undefined): number {
   if (!cfg || cfg.chain_mode !== "live") return 1;
-  const served = (cfg.chain as { amount_divisor?: number | null }).amount_divisor;
+  const served = cfg.chain.amount_divisor;
   if (typeof served === "number" && Number.isInteger(served) && served >= 1) return served;
   return LIVE_DIVISOR_FALLBACK;
 }
