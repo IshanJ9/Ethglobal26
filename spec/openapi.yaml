@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Proofwork API
-  version: 1.5.0
+  version: 1.6.0
   description: |
     FROZEN CONTRACT between Agent A (implements) and Agent B (consumes). Changes only via CHANGE_REQUESTS.md.
     Conventions (apply everywhere):
@@ -29,6 +29,7 @@ tags:
   - { name: verify }
   - { name: review }
   - { name: zk }
+  - { name: agent-pass }
   - { name: dev }
 security:
   - bearerAuth: []
@@ -650,6 +651,7 @@ paths:
               additionalProperties: false
               required: [employee_id, cycle_id]
               properties:
+                agent_pass_checkpoint_id: { type: [string, "null"], description: "Approved World ID Agent Pass checkpoint for exactly this operation (required when agent_pass_mode is live)." }
                 employee_id: { type: string }
                 cycle_id: { type: string }
                 peer_employee_id: { type: [string, "null"] }
@@ -751,6 +753,44 @@ paths:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ZkWitness" } } } }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
+  /v1/agent-pass/checkpoints:
+    post:
+      tags: [agent-pass]
+      operationId: createAgentCheckpoint
+      description: "World ID Agent Pass human checkpoint (auth.world.org, OIDC Device Authorization Grant). Pauses an agent workflow until the authorizing human approves it with fresh World ID authentication (max_age=0, Orb class). The operation is saved verbatim and bound to the attempt; the approval is usable once, for exactly that operation, within 10 minutes."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [operation]
+              properties:
+                operation: { $ref: "#/components/schemas/AgentOperation" }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/AgentCheckpoint" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/agent-pass/checkpoints/{checkpoint_id}:
+    get:
+      tags: [agent-pass]
+      operationId: getAgentCheckpoint
+      description: "Polls World IdP (server side, respecting its interval) and validates the ID token: signature (JWKS), iss, aud, exp, acr, auth_time newer than the attempt, and the (iss, sub) linked to this persona (enrolled on first approval). Returns the current status."
+      parameters: [{ name: checkpoint_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/AgentCheckpoint" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/agent-pass/checkpoints/{checkpoint_id}/cancel:
+    post:
+      tags: [agent-pass]
+      operationId: cancelAgentCheckpoint
+      parameters: [{ name: checkpoint_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/AgentCheckpoint" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -1429,6 +1469,7 @@ components:
           properties:
             network: { type: string, enum: [sepolia, mainnet, none] }
             parent_name: { type: [string, "null"] }
+        agent_pass_mode: { type: string, enum: ["off", live], description: "live = the review agent needs a World ID Agent Pass human checkpoint before it reads the vault." }
         agent:
           type: object
           additionalProperties: false
@@ -1717,6 +1758,17 @@ components:
             inputs_hash: { $ref: "#/components/schemas/Bytes32" }
             output_hash: { $ref: "#/components/schemas/Bytes32" }
             review_hash: { $ref: "#/components/schemas/Bytes32" }
+        agent_pass:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [checkpoint_id, operation_hash, acr, auth_time, sub_hash]
+          description: "World ID Agent Pass approval the review agent ran under (null when Agent Pass is off)."
+          properties:
+            checkpoint_id: { type: string }
+            operation_hash: { $ref: "#/components/schemas/Bytes32" }
+            acr: { type: [string, "null"] }
+            auth_time: { $ref: "#/components/schemas/Timestamp" }
+            sub_hash: { $ref: "#/components/schemas/Bytes32" }
         anchor:
           oneOf:
             - type: "null"
@@ -1792,3 +1844,42 @@ components:
         verifier_address: { type: [string, "null"] }
         registry_address: { type: string }
         chain_id: { type: integer }
+    AgentOperation:
+      type: object
+      additionalProperties: false
+      required: [kind, employee_id, cycle_id]
+      properties:
+        kind: { type: string, enum: [review.generate] }
+        employee_id: { type: string }
+        cycle_id: { type: string }
+        peer_employee_id: { type: [string, "null"] }
+    AgentCheckpoint:
+      type: object
+      additionalProperties: false
+      required: [checkpoint_id, operation, operation_hash, agent, status, user_code, verification_uri, verification_uri_complete, expires_at, interval_s, requested_by, world, reason, created_at, decided_at]
+      properties:
+        checkpoint_id: { type: string }
+        operation: { $ref: "#/components/schemas/AgentOperation" }
+        operation_hash: { $ref: "#/components/schemas/Bytes32" }
+        agent: { type: string, description: "ENS name of the agent waiting on the human" }
+        status: { type: string, enum: [pending, approved, denied, expired, cancelled, used] }
+        user_code: { type: [string, "null"] }
+        verification_uri: { type: [string, "null"] }
+        verification_uri_complete: { type: [string, "null"] }
+        expires_at: { $ref: "#/components/schemas/Timestamp" }
+        interval_s: { type: integer }
+        requested_by: { type: string }
+        world:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [iss, sub_hash, acr, amr, auth_time, enrolled]
+          properties:
+            iss: { type: string }
+            sub_hash: { $ref: "#/components/schemas/Bytes32" }
+            acr: { type: [string, "null"] }
+            amr: { type: array, items: { type: string } }
+            auth_time: { $ref: "#/components/schemas/Timestamp" }
+            enrolled: { type: boolean, description: "true when this approval linked the World ID to the persona for the first time" }
+        reason: { type: [string, "null"] }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+        decided_at: { type: [string, "null"] }

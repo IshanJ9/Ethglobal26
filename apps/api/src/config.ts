@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-export const SPEC_VERSION = "1.5.0";
+export const SPEC_VERSION = "1.6.0";
 
 /** apps/api directory and monorepo root, independent of the process cwd. */
 export const API_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -64,6 +64,10 @@ const schema = z.object({
   ZEROG_PRIVATE_KEY: optStr,
   ZK_VERIFIER_ADDRESS: optStr,
   ENS_ISSUER_PRIVATE_KEY: optStr,
+  /** World ID Agent Pass (auth.world.org OIDC client, device flow). live = the review agent needs a human checkpoint. */
+  AGENT_PASS_MODE: z.enum(["off", "live"]).default("off"),
+  WORLD_IDP_CLIENT_ID: optStr,
+  WORLD_IDP_CLIENT_SECRET: optStr,
   REVIEW_AGENT_PRIVATE_KEY: optStr,
   ENS_SUBREGISTRY: optStr,
   ENS_ORG_RESOLVER: optStr,

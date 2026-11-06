@@ -10,6 +10,8 @@ import { useClusterBoard, useClusters, useCurrentCycle } from "@/lib/queries";
 import { ActorTag, Button, Card, Empty, ErrorNote, HashPill, Loading, PageTitle, Stat } from "@/components/ui";
 import { DistStrip, pctPpm, zText } from "@/components/review";
 import { useEnsText } from "@/lib/ens";
+import { usePublicConfig } from "@/lib/config";
+import { AgentPassGate } from "@/components/AgentPassGate";
 import manifest from "../../../../../deployments/ens.json";
 
 /** ENS: each cluster publishes its plan's formula hash in the `policy` text record of its name. */
@@ -44,9 +46,12 @@ function ClustersInner() {
   useSignOutOnUnauthorized(clusters.error, board.error);
   const canReview = me?.role === "hr" || me?.role === "manager";
 
+  const cfg = usePublicConfig();
+  const agentPassLive = cfg.data?.agent_pass_mode === "live";
+  const [gate, setGate] = useState<string[] | null>(null);
   const review = useAction(
-    (ids: string[], key) =>
-      unwrap(api.POST("/v1/reviews", { body: { employee_id: ids[0], cycle_id: cycle!.cycle_id, peer_employee_id: ids[1] ?? null }, ...idem(key) })),
+    ({ ids, checkpoint }: { ids: string[]; checkpoint?: string | null }, key) =>
+      unwrap(api.POST("/v1/reviews", { body: { employee_id: ids[0], cycle_id: cycle!.cycle_id, peer_employee_id: ids[1] ?? null, agent_pass_checkpoint_id: checkpoint ?? null }, ...idem(key) })),
     { onSuccess: (r) => router.push(`/reviews/${r.review_id}`) },
   );
 
@@ -112,13 +117,22 @@ function ClustersInner() {
               canReview ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted">{pick.length === 2 ? `${name(pick[0])} vs ${name(pick[1])}` : pick.length === 1 ? `${name(pick[0])} - pick a peer to compare, or review alone` : "Tick one person (or two to compare)"}</span>
-                  <Button onClick={() => review.mutate(pick)} disabled={!pick.length || review.isPending}>
+                  <Button onClick={() => (agentPassLive ? setGate([...pick]) : review.mutate({ ids: pick }))} disabled={!pick.length || review.isPending || !!gate}>
                     {review.isPending ? "0G is writing the reasoning…" : pick.length === 2 ? "Compare + review" : "Prepare review"}
                   </Button>
                 </div>
               ) : null
             }
           >
+            {gate && cycle ? (
+              <div className="mb-3">
+                <AgentPassGate
+                  operation={{ kind: "review.generate", employee_id: gate[0], cycle_id: cycle.cycle_id, peer_employee_id: gate[1] ?? null }}
+                  onApproved={(checkpoint) => { review.mutate({ ids: gate, checkpoint }); setGate(null); }}
+                  onClose={() => setGate(null)}
+                />
+              </div>
+            ) : null}
             <ErrorNote error={review.error} className="mb-3" />
             {review.isPending ? (
               <p className="mb-3 rounded-md border border-ai/40 bg-ai/10 px-3 py-2 text-sm text-ai">

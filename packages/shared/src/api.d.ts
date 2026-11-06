@@ -875,6 +875,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/agent-pass/checkpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description World ID Agent Pass human checkpoint (auth.world.org, OIDC Device Authorization Grant). Pauses an agent workflow until the authorizing human approves it with fresh World ID authentication (max_age=0, Orb class). The operation is saved verbatim and bound to the attempt; the approval is usable once, for exactly that operation, within 10 minutes. */
+        post: operations["createAgentCheckpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agent-pass/checkpoints/{checkpoint_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Polls World IdP (server side, respecting its interval) and validates the ID token: signature (JWKS), iss, aud, exp, acr, auth_time newer than the attempt, and the (iss, sub) linked to this persona (enrolled on first approval). Returns the current status. */
+        get: operations["getAgentCheckpoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agent-pass/checkpoints/{checkpoint_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelAgentCheckpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1448,6 +1498,11 @@ export interface components {
                 network?: "sepolia" | "mainnet" | "none";
                 parent_name?: string | null;
             };
+            /**
+             * @description live = the review agent needs a World ID Agent Pass human checkpoint before it reads the vault.
+             * @enum {string}
+             */
+            agent_pass_mode?: "off" | "live";
             agent: {
                 ens_name: string;
                 address: components["schemas"]["Address"];
@@ -1672,6 +1727,14 @@ export interface components {
                 output_hash: components["schemas"]["Bytes32"];
                 review_hash: components["schemas"]["Bytes32"];
             };
+            /** @description World ID Agent Pass approval the review agent ran under (null when Agent Pass is off). */
+            agent_pass?: {
+                checkpoint_id: string;
+                operation_hash: components["schemas"]["Bytes32"];
+                acr: string | null;
+                auth_time: components["schemas"]["Timestamp"];
+                sub_hash: components["schemas"]["Bytes32"];
+            } | null;
             anchor: null | {
                 numeric_batch_id: number;
                 tx_hash: string;
@@ -1733,6 +1796,40 @@ export interface components {
             verifier_address: string | null;
             registry_address: string;
             chain_id: number;
+        };
+        AgentOperation: {
+            /** @enum {string} */
+            kind: "review.generate";
+            employee_id: string;
+            cycle_id: string;
+            peer_employee_id?: string | null;
+        };
+        AgentCheckpoint: {
+            checkpoint_id: string;
+            operation: components["schemas"]["AgentOperation"];
+            operation_hash: components["schemas"]["Bytes32"];
+            /** @description ENS name of the agent waiting on the human */
+            agent: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "denied" | "expired" | "cancelled" | "used";
+            user_code: string | null;
+            verification_uri: string | null;
+            verification_uri_complete: string | null;
+            expires_at: components["schemas"]["Timestamp"];
+            interval_s: number;
+            requested_by: string;
+            world: {
+                iss: string;
+                sub_hash: components["schemas"]["Bytes32"];
+                acr: string | null;
+                amr: string[];
+                auth_time: components["schemas"]["Timestamp"];
+                /** @description true when this approval linked the World ID to the persona for the first time */
+                enrolled: boolean;
+            } | null;
+            reason: string | null;
+            created_at: components["schemas"]["Timestamp"];
+            decided_at: string | null;
         };
     };
     responses: {
@@ -2989,6 +3086,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Approved World ID Agent Pass checkpoint for exactly this operation (required when agent_pass_mode is live). */
+                    agent_pass_checkpoint_id?: string | null;
                     employee_id: string;
                     cycle_id: string;
                     peer_employee_id?: string | null;
@@ -3164,6 +3263,82 @@ export interface operations {
             };
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
+        };
+    };
+    createAgentCheckpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    operation: components["schemas"]["AgentOperation"];
+                };
+            };
+        };
+        responses: {
+            /** @description created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCheckpoint"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getAgentCheckpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checkpoint_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCheckpoint"];
+                };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    cancelAgentCheckpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checkpoint_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCheckpoint"];
+                };
+            };
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
 }

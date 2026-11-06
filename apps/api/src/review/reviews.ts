@@ -1,4 +1,5 @@
 import type { EnsCredentials } from "../ens/credentials.ts";
+import type { AgentPassService } from "../agentpass/agentpass.ts";
 // CR-004: a three-layer review (layer 1 KRA score in the cluster, layer 2 context, layer 3 0G reasoning),
 // stored with every hash needed to prove what it was built from, and anchorable on chain.
 import { canonicalJson, keccakUtf8, type Hex } from "@proofwork/crypto";
@@ -47,13 +48,15 @@ export class ReviewService {
     private readonly exclusive: <T>(fn: () => Promise<T>) => Promise<T> = (fn) => fn(),
     /** ENS review credentials (expiring, non-transferable subname per anchored review). Optional. */
     private readonly credentials: EnsCredentials | null = null,
+    /** World ID Agent Pass: human checkpoint before the review agent reads the vault. Optional. */
+    private readonly agentPass: AgentPassService | null = null,
   ) {}
 
   private canCreate(viewer: Persona, e: Employee) {
     return isHr(viewer) || (viewer.role === "manager" && e.manager_employee_id === viewer.employee_id);
   }
 
-  async create(viewer: Persona, employeeId: string, cycleId: string, peerId: string | null | undefined): Promise<Review> {
+  async create(viewer: Persona, employeeId: string, cycleId: string, peerId: string | null | undefined, agentPassCheckpointId?: string | null): Promise<Review> {
     const emp = this.org.employee(employeeId);
     if (!emp || !canView(viewer, emp)) throw errors.notFound("Employee not found");
     if (!this.canCreate(viewer, emp)) throw errors.forbidden("Only HR or the employee's manager can prepare a review");
@@ -82,6 +85,8 @@ export class ReviewService {
     const { _notes, ...contextReport } = ctx;
 
     // Vault: every evidence item of the subject (and peer) is read back and its commitment recomputed.
+    // World ID Agent Pass: a fresh, Orb-verified human approval for exactly this operation, used once, before the agent reads any vault data.
+    const agentPass = this.agentPass?.consume(viewer, agentPassCheckpointId, { kind: "review.generate", employee_id: employeeId, cycle_id: cycleId, peer_employee_id: peer?.employee_id ?? null }) ?? null;
     const rows = [employeeId, ...(peer ? [peer.employee_id] : [])].flatMap((id) => this.evidence.forEmployeeCycle(id, cycleId));
     const { report: vault, payloads } = await this.vault.read(rows);
 
@@ -208,6 +213,7 @@ export class ReviewService {
       hashes,
       anchor: null,
       acknowledgement: null,
+      agent_pass: agentPass,
       world_actions: { anchor: ANCHOR_WORLD_ACTION, acknowledge: ACK_WORLD_ACTION, signal: hashes.review_hash },
       reasoning_agent: {
         ens_name: this.config.ENS_PARENT_NAME ? `review-agent.${this.config.ENS_PARENT_NAME}` : null,

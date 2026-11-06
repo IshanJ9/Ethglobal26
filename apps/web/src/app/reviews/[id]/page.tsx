@@ -323,6 +323,15 @@ export default function ReviewPage() {
             ) : (
               <p className="text-muted">Not acknowledged yet. {r.display_name} confirms it from their own login with World ID.</p>
             )}
+            <p className="font-semibold">Agent authorization (World ID Agent Pass)</p>
+            {r.agent_pass ? (
+              <p className="text-chain">
+                The review agent ran only after a verified human approved this exact request with World ID ({r.agent_pass.acr?.split("/").pop() ?? "World ID"}, {new Date(r.agent_pass.auth_time).toLocaleString()}). One approval, one run.{" "}
+                <span className="text-xs text-muted">operation <HashPill value={r.agent_pass.operation_hash} /></span>
+              </p>
+            ) : (
+              <p className="text-muted">Not required when this review was prepared (Agent Pass off).</p>
+            )}
             <ReviewCredential reviewHash={r.hashes.review_hash} employeeId={r.employee_id} isHr={isHr} anchored={!!r.anchor && r.anchor.chain_mode === "live"} />
             <p className="text-xs text-muted">Prepared by {r.created_by} on {new Date(r.created_at).toLocaleString()}. <TextLink href={`/clusters?c=${r.cluster.cluster_id}`}>Open the cluster</TextLink></p>
           </div>

@@ -36,6 +36,7 @@ export function buildPublicConfig(c: Config): PublicConfig {
     world_mode: c.WORLD_MODE,
     world_app_id: c.WORLD_APP_ID ?? null,
     zerog_mode: c.ZEROG_MODE,
+    agent_pass_mode: c.AGENT_PASS_MODE === "live" && c.WORLD_IDP_CLIENT_ID && c.WORLD_IDP_CLIENT_SECRET ? "live" : "off",
     ens: { network: c.ENS_NETWORK, parent_name: c.ENS_PARENT_NAME ?? null },
     agent: { ens_name: c.AGENT_ENS_NAME, address: getAddress(agentAddress) },
   };

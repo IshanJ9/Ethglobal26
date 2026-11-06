@@ -37,6 +37,8 @@ import { VaultReader } from "./review/vault.ts";
 import { ZeroGReasoner, type Reasoner } from "./review/reasoning.ts";
 import { ReviewService } from "./review/reviews.ts";
 import { ZkService } from "./zk/zk.ts";
+import { AgentPassService } from "./agentpass/agentpass.ts";
+import type { JWTVerifyGetKey } from "jose";
 
 export interface ServiceOverrides {
   clock?: Clock;
@@ -50,6 +52,9 @@ export interface ServiceOverrides {
   ens?: EnsLookup | null;
   /** CR-004 review reasoning; null = deterministic (mock) writer. Default: 0G Private Computer when ZEROG_MODE=live. */
   reasoner?: Reasoner | null;
+  /** World ID Agent Pass: IdP HTTP and JWKS (tests inject a fake IdP). */
+  agentPassHttp?: typeof fetch;
+  agentPassJwks?: JWTVerifyGetKey;
 }
 
 export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m: string, d?: Record<string, unknown>) => void = () => {}) {
@@ -105,13 +110,14 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   if (o.ens === undefined && config.ENS_NETWORK === "sepolia") {
     credentials.publishAgentPrompt(keccak256(stringToBytes(SYSTEM_PROMPT))).catch((e) => log(`review-agent prompt publish failed: ${e instanceof Error ? e.message.split(String.fromCharCode(10))[0] : e}`));
   }
-  const reviews = new ReviewService(db, org, evidence, clusters, contextSvc, vault, reasoner, chain, world, audit, config, clock, log, (fn) => chainSvc.exclusive(fn), credentials);
+  const agentPass = new AgentPassService(db, org, envelope, audit, config, clock, o.agentPassHttp ?? fetch, o.agentPassJwks);
+  const reviews = new ReviewService(db, org, evidence, clusters, contextSvc, vault, reasoner, chain, world, audit, config, clock, log, (fn) => chainSvc.exclusive(fn), credentials, agentPass);
 
   const zk = new ZkService(db, scorecards, org, envelope, chain, audit, config, clock, (fn) => chainSvc.exclusive(fn));
 
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,
-    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk,
+    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk, agentPass,
   };
 }
 export type Services = ReturnType<typeof buildServices>;

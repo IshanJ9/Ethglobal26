@@ -1,3 +1,4 @@
+import type { AgentOperation } from "../agentpass/agentpass.ts";
 // CR-004 routes: clusters (layer 1 in cluster), employee context (layer 2), reviews (layer 3 + anchor).
 import type { FastifyInstance } from "fastify";
 import { canView, isInternal, makeAuthenticate, me } from "../auth/auth.ts";
@@ -33,8 +34,8 @@ export async function reviewRoutes(app: FastifyInstance, { svc }: { svc: Service
   });
 
   app.post("/v1/reviews", auth, async (req, reply) => {
-    const b = req.body as { employee_id: string; cycle_id: string; peer_employee_id?: string | null };
-    const review = await svc.reviews.create(me(req), b.employee_id, b.cycle_id, b.peer_employee_id);
+    const b = req.body as { employee_id: string; cycle_id: string; peer_employee_id?: string | null; agent_pass_checkpoint_id?: string | null };
+    const review = await svc.reviews.create(me(req), b.employee_id, b.cycle_id, b.peer_employee_id, b.agent_pass_checkpoint_id);
     return reply.code(201).send(review);
   });
 
@@ -48,6 +49,11 @@ export async function reviewRoutes(app: FastifyInstance, { svc }: { svc: Service
   app.post("/v1/reviews/:review_id/anchor", auth, async (req) =>
     svc.reviews.anchor(me(req), (req.params as { review_id: string }).review_id, (req.body as { world_result?: WorldResult } | undefined)?.world_result),
   );
+
+  // ---- World ID Agent Pass (human checkpoint for the review agent) ----
+  app.post("/v1/agent-pass/checkpoints", auth, async (req, reply) => reply.code(201).send(await svc.agentPass.create(me(req), (req.body as { operation: AgentOperation }).operation)));
+  app.get("/v1/agent-pass/checkpoints/:checkpoint_id", auth, async (req) => svc.agentPass.get(me(req), (req.params as { checkpoint_id: string }).checkpoint_id));
+  app.post("/v1/agent-pass/checkpoints/:checkpoint_id/cancel", auth, async (req) => svc.agentPass.cancel(me(req), (req.params as { checkpoint_id: string }).checkpoint_id));
 
   // ---- zero-knowledge score proofs ----
   app.post("/v1/scorecards/:scorecard_id/zk-commit", auth, async (req) => svc.zk.commit(me(req), (req.params as { scorecard_id: string }).scorecard_id));
