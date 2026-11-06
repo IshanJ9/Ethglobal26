@@ -38,6 +38,7 @@ import { ZeroGReasoner, type Reasoner } from "./review/reasoning.ts";
 import { ReviewService } from "./review/reviews.ts";
 import { ZkService } from "./zk/zk.ts";
 import { AgentPassService } from "./agentpass/agentpass.ts";
+import { AgentService } from "./agents/agents.ts";
 import type { JWTVerifyGetKey } from "jose";
 
 export interface ServiceOverrides {
@@ -115,9 +116,11 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
 
   const zk = new ZkService(db, scorecards, org, envelope, chain, audit, config, clock, (fn) => chainSvc.exclusive(fn));
 
+  const agents = new AgentService(db, org, clusters, contextSvc, audit, clock, config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL ? { baseUrl: config.ZEROG_BASE_URL, apiKey: config.ZEROG_API_KEY, model: config.ZEROG_MODEL } : null);
+
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,
-    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk, agentPass,
+    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk, agentPass, agents,
   };
 }
 export type Services = ReturnType<typeof buildServices>;

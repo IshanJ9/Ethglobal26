@@ -30,6 +30,7 @@ tags:
   - { name: review }
   - { name: zk }
   - { name: agent-pass }
+  - { name: agents }
   - { name: dev }
 security:
   - bearerAuth: []
@@ -812,6 +813,58 @@ paths:
       responses:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/ZkProofRecord" } } } }
         "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/agents/bonus-allocation:
+    post:
+      tags: [agents]
+      operationId: proposeBonusAllocation
+      description: "HR only. The bonus allocation agent (0G Private Computer, function calling over the three review layers) splits a USDC budget across a peer cluster. Code computes the score-proportional base split, clips agent adjustments to ±15% and renormalises to the exact budget. The result is what gets proposed to the Arc Studio BonusPool."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [cycle_id, cluster_id, budget, kind]
+              properties:
+                cycle_id: { type: string }
+                cluster_id: { type: string }
+                budget: { $ref: "#/components/schemas/Amount" }
+                kind: { type: string, enum: [year_end_bonus, bounty, freelance] }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/BonusAllocation" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/agents/promotion-chat:
+    post:
+      tags: [agents]
+      operationId: promotionChat
+      description: "HR only. Chat with the promotion planning agent (0G Private Computer, function calling). It ranks candidates from the three layers and proposes moves, including the backfill cascade. Code validates every move."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [cycle_id, messages]
+              properties:
+                cycle_id: { type: string }
+                messages:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [role, content]
+                    properties:
+                      role: { type: string, enum: [user, assistant] }
+                      content: { type: string, maxLength: 4000 }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/PromotionChat" } } } }
+        "403": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
@@ -1943,3 +1996,72 @@ components:
         already_recorded: { type: boolean }
         threshold_bps: { type: integer }
         commitment_hex: { $ref: "#/components/schemas/Bytes32" }
+    AgentTrace:
+      type: object
+      additionalProperties: false
+      required: [ens_name, model, request_ids, tool_calls, completed]
+      properties:
+        ens_name: { type: string }
+        model: { type: string }
+        request_ids: { type: array, items: { type: string } }
+        tool_calls: { type: array, items: { type: object, additionalProperties: false, required: [tool, args], properties: { tool: { type: string }, args: { type: string } } } }
+        completed: { type: boolean }
+    BonusAllocation:
+      type: object
+      additionalProperties: false
+      required: [allocation_id, kind, cycle_id, cluster_id, budget, bucket_id, lines, excluded, rationale, rationale_hash, agent, guardrails, created_at]
+      properties:
+        allocation_id: { type: string }
+        kind: { type: string, enum: [year_end_bonus, bounty, freelance] }
+        cycle_id: { type: string }
+        cluster_id: { type: string }
+        budget: { $ref: "#/components/schemas/Amount" }
+        bucket_id: { $ref: "#/components/schemas/Bytes32" }
+        lines:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [employee_id, name, wallet, ens, score_bps, rank, base_share_bps, adjustment_bps, share_bps, amount, reason, evidence_hash]
+            properties:
+              employee_id: { type: string }
+              name: { type: string }
+              wallet: { type: string }
+              ens: { type: [string, "null"] }
+              score_bps: { type: integer }
+              rank: { type: integer }
+              base_share_bps: { type: integer }
+              adjustment_bps: { type: integer }
+              share_bps: { type: integer }
+              amount: { $ref: "#/components/schemas/Amount" }
+              reason: { type: string }
+              evidence_hash: { $ref: "#/components/schemas/Bytes32" }
+        excluded: { type: array, items: { type: object, additionalProperties: false, required: [employee_id, name, score_bps], properties: { employee_id: { type: string }, name: { type: string }, score_bps: { type: integer } } } }
+        rationale: { type: string }
+        rationale_hash: { $ref: "#/components/schemas/Bytes32" }
+        agent: { $ref: "#/components/schemas/AgentTrace" }
+        guardrails: { type: array, items: { type: string } }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+    PromotionChat:
+      type: object
+      additionalProperties: false
+      required: [reply, moves, agent, created_at]
+      properties:
+        reply: { type: string }
+        moves:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [employee_id, name, from_cluster, to_cluster, reason, is_backfill, valid, promotion_readiness]
+            properties:
+              employee_id: { type: string }
+              name: { type: string }
+              from_cluster: { type: string }
+              to_cluster: { type: string }
+              reason: { type: string }
+              is_backfill: { type: boolean }
+              valid: { type: boolean }
+              promotion_readiness: { type: [string, "null"] }
+        agent: { $ref: "#/components/schemas/AgentTrace" }
+        created_at: { $ref: "#/components/schemas/Timestamp" }

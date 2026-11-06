@@ -55,6 +55,10 @@ export async function reviewRoutes(app: FastifyInstance, { svc }: { svc: Service
   app.get("/v1/agent-pass/checkpoints/:checkpoint_id", auth, async (req) => svc.agentPass.get(me(req), (req.params as { checkpoint_id: string }).checkpoint_id));
   app.post("/v1/agent-pass/checkpoints/:checkpoint_id/cancel", auth, async (req) => svc.agentPass.cancel(me(req), (req.params as { checkpoint_id: string }).checkpoint_id));
 
+  // ---- HR agents on 0G (bonus allocation, promotion planning) ----
+  app.post("/v1/agents/bonus-allocation", auth, async (req) => svc.agents.allocate(me(req), req.body as { cycle_id: string; cluster_id: string; budget: string; kind: "year_end_bonus" | "bounty" | "freelance" }));
+  app.post("/v1/agents/promotion-chat", auth, async (req) => svc.agents.promote(me(req), req.body as { cycle_id: string; messages: Array<{ role: "user" | "assistant"; content: string }> }));
+
   // ---- zero-knowledge score proofs ----
   app.post("/v1/zk/proofs", async (req) => svc.zk.recordProof(req.body as { proof: unknown; public_signals: string[]; numeric_batch_id: number }));
   app.post("/v1/scorecards/:scorecard_id/zk-commit", auth, async (req) => svc.zk.commit(me(req), (req.params as { scorecard_id: string }).scorecard_id));

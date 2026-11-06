@@ -11,7 +11,7 @@ const API = process.env.API ?? "http://localhost:8787";
 const acct = (pid: string) => privateKeyToAccount(keccak256(stringToBytes(`proofwork-demo-persona:${pid}`)));
 const S = seedScenario() as any;
 const sc = (S.scripted_claims as any[]).find((c) => c.id === process.argv[2]) ?? (S.scripted_claims as any[])[0];
-const j = async (r: Response) => { const b = await r.json(); if (!r.ok) throw new Error(`${r.status} ${JSON.stringify(b)}`); return b; };
+const j = async (r: Response): Promise<any> => { const b: any = await r.json(); if (!r.ok) throw new Error(`${r.status} ${JSON.stringify(b)}`); return b; };
 
 const tok = (await j(await fetch(`${API}/v1/dev/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ persona_id: sc.employee }) }))).token;
 const h = { "content-type": "application/json", authorization: `Bearer ${tok}` };

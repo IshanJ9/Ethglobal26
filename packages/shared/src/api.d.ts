@@ -942,6 +942,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/agents/bonus-allocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description HR only. The bonus allocation agent (0G Private Computer, function calling over the three review layers) splits a USDC budget across a peer cluster. Code computes the score-proportional base split, clips agent adjustments to ±15% and renormalises to the exact budget. The result is what gets proposed to the Arc Studio BonusPool. */
+        post: operations["proposeBonusAllocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/promotion-chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description HR only. Chat with the promotion planning agent (0G Private Computer, function calling). It ranks candidates from the three layers and proposes moves, including the backfill cascade. Code validates every move. */
+        post: operations["promotionChat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1875,6 +1909,64 @@ export interface components {
             already_recorded: boolean;
             threshold_bps: number;
             commitment_hex: components["schemas"]["Bytes32"];
+        };
+        AgentTrace: {
+            ens_name: string;
+            model: string;
+            request_ids: string[];
+            tool_calls: {
+                tool: string;
+                args: string;
+            }[];
+            completed: boolean;
+        };
+        BonusAllocation: {
+            allocation_id: string;
+            /** @enum {string} */
+            kind: "year_end_bonus" | "bounty" | "freelance";
+            cycle_id: string;
+            cluster_id: string;
+            budget: components["schemas"]["Amount"];
+            bucket_id: components["schemas"]["Bytes32"];
+            lines: {
+                employee_id: string;
+                name: string;
+                wallet: string;
+                ens: string | null;
+                score_bps: number;
+                rank: number;
+                base_share_bps: number;
+                adjustment_bps: number;
+                share_bps: number;
+                amount: components["schemas"]["Amount"];
+                reason: string;
+                evidence_hash: components["schemas"]["Bytes32"];
+            }[];
+            excluded: {
+                employee_id: string;
+                name: string;
+                score_bps: number;
+            }[];
+            rationale: string;
+            rationale_hash: components["schemas"]["Bytes32"];
+            agent: components["schemas"]["AgentTrace"];
+            guardrails: string[];
+            created_at: components["schemas"]["Timestamp"];
+        };
+        PromotionChat: {
+            reply: string;
+            moves: {
+                employee_id: string;
+                name: string;
+                from_cluster: string;
+                to_cluster: string;
+                reason: string;
+                is_backfill: boolean;
+                valid: boolean;
+                promotion_readiness: string | null;
+            }[];
+            agent: components["schemas"]["AgentTrace"];
+            created_at: components["schemas"]["Timestamp"];
         };
     };
     responses: {
@@ -3414,6 +3506,72 @@ export interface operations {
                 };
             };
             400: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    proposeBonusAllocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    cycle_id: string;
+                    cluster_id: string;
+                    budget: components["schemas"]["Amount"];
+                    /** @enum {string} */
+                    kind: "year_end_bonus" | "bounty" | "freelance";
+                };
+            };
+        };
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BonusAllocation"];
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    promotionChat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    cycle_id: string;
+                    messages: {
+                        /** @enum {string} */
+                        role: "user" | "assistant";
+                        content: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionChat"];
+                };
+            };
+            403: components["responses"]["Error"];
             409: components["responses"]["Error"];
         };
     };
