@@ -17,13 +17,16 @@ export function AgentPassGate({ operation, onApproved, onClose }: { operation: O
   const [cp, setCp] = useState<Checkpoint | null>(null);
   const [err, setErr] = useState<unknown>(null);
   const done = useRef(false);
+  // one checkpoint per gate, even when React runs the effect twice (dev StrictMode)
+  const created = useRef<Promise<Checkpoint> | null>(null);
 
   useEffect(() => {
     let stop = false;
     let timer: ReturnType<typeof setTimeout>;
     (async () => {
       try {
-        let c = await unwrap(api.POST("/v1/agent-pass/checkpoints", { body: { operation } }));
+        created.current ??= unwrap(api.POST("/v1/agent-pass/checkpoints", { body: { operation } }));
+        let c = await created.current;
         if (stop) return;
         setCp(c);
         const tick = async () => {

@@ -47,6 +47,16 @@ until a verified human approves that exact request with World ID.
 | Employee tries to authorize the agent | 403. They cannot see HR's checkpoints (404) |
 | Approval older than 10 minutes at execution | 401 |
 
+## Live run (7 Nov 2026, real World IdP, Orb-verified human)
+
+| Step | Result |
+|---|---|
+| Review agent called with no approval | `401 world_verification_failed`, reason `agent_pass_required` |
+| Prepare review (Ben Carter) | auth.world.org issued a device code; the World page showed requester "proofworkk", "Requires Orb" |
+| HR approved with a passkey on an Orb-verified World ID account | ID token validated: `acr = …/acr/orb`, `amr = [pop, user, mfa]`, fresh `auth_time`; World ID enrolled (linked) to HR |
+| Review agent ran | `rev_2cc8c8cc459de1c31a48`, written by 0G Private Computer; the review page shows "Agent authorization (World ID Agent Pass)" |
+| Same approval reused | `401 … this approval was already used (one operation per approval)` |
+
 ## Why Agent Pass, next to World ID 4.0 proofs
 
 Proofwork already uses World ID 4.0 (IDKit) proofs for one-off human signatures bound to a hash: approve a scorecard,
@@ -72,6 +82,11 @@ Code: `apps/api/src/agentpass/agentpass.ts`, `apps/api/migrations/005_agent_pass
   `acr_values` list), so a backend-only integration was straightforward with `jose`.
 - **Friction:** the device flow requires a registered HTTPS redirect URI even though it never redirects. That is
   confusing for headless agents and localhost development.
+- **Onboarding friction we hit:** the device page offers only "Continue with a passkey" or "Deny" until the person has
+  a World IdP account. A first-time Orb-verified user must first sign up at auth.world.org (World App QR, then a
+  passkey) and then restart the connection. Doing the World App step on the same phone as the browser left the page
+  waiting after World App said "presented". Laptop page plus phone scan worked. A laptop that cannot hold a passkey
+  needs "use a phone or tablet".
 - **Missing:** an operation-binding parameter (for example `binding_message`, as in CIBA, or RAR
   `authorization_details`) shown on the phone. Today the human approves "sign in to Proofwork", and the binding to the
   exact operation lives only on our side.
