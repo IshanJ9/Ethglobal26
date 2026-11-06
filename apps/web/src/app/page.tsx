@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { isManager, useRequireSession, useSignOutOnUnauthorized } from "@/lib/auth";
 import { formatBps } from "@/lib/format";
 import { useClaims, useCurrentCycle, useEvidence, useScorecards } from "@/lib/queries";
@@ -17,8 +19,13 @@ export default function HomePage() {
   const evidence = useEvidence({ employee_id: me?.employee_id, cycle_id: cycle?.cycle_id });
   const scorecards = useScorecards({ employee_id: me?.employee_id, cycle_id: cycle?.cycle_id });
   useSignOutOnUnauthorized(cycles.error, claims.error, evidence.error, scorecards.error);
+  const router = useRouter();
+  // HR has no personal cycle: land on the cluster board (reviews, agents and payouts start there)
+  useEffect(() => {
+    if (me?.role === "hr") router.replace("/clusters");
+  }, [me?.role, router]);
 
-  if (!me) return null;
+  if (!me || me.role === "hr") return null;
   if (me.role === "external_cosigner") {
     return (
       <PageTitle title={`Hello, ${me.display_name}`} sub="Co-signers do not have a dashboard. Open the co-sign link you were sent to review a claim." />
