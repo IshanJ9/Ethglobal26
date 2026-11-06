@@ -17,6 +17,7 @@ mocked mode (read from `GET /v1/config/public`).
 | World step-up | `WORLD_MODE` | Accepts `{adapter:"mock", payload:{action, signal, nullifier}}` bound to the server's action + challenge; nullifier replay rejected | World ID **4.0** cloud verify `POST developer.world.org/api/v4/verify/{rp_id}`, IDKit payload forwarded as-is, action/signal (`hashToField`) binding, environment check, replay table | **Not run against the real portal** (unit-tested against a fake portal). Agent Pass fails closed until U1 is answered. Needs CR-002 (`world_rp_context`). |
 | AI draft (0G Private Computer) | `ZEROG_MODE` | Deterministic regex extractor (`provider:"mock"`, `tee_verified:null`) | OpenAI-compatible chat completion with `X-0G-Provider-Trust-Mode: private`, `verify_tee:true`; trace recorded in `InferenceRecord` | **Not run**: no `ZEROG_API_KEY` yet (U2). `zerog:probe` tests it in one command. A failed live call falls back to the mock extractor and is labelled MOCK. |
 | Encrypted replica (0G Storage) | `ZEROG_MODE` | Encrypted payload written to `apps/api/data/replica/<root>.bin` | `@0gfoundation/0g-storage-ts-sdk` upload (Galileo testnet, turbo indexer) | **Not run**: needs `ZEROG_STORAGE_*` + `ZEROG_PRIVATE_KEY`. `zerog:probe` tests it. |
+| ENS names (Sepolia) | `ENS_NETWORK` | `none`: agent shown as `kra-agent`, people have no ENS name | At startup (background), forward-checks `kra-agent.<ENS_PARENT_NAME>` against the agent key and `<firstname>.<ENS_PARENT_NAME>` against each person's wallet; only matching names are served (PublicConfig.agent, run `agent_identity`, Persona/Employee `ens_name`) | **Run live**, Fri 6 Nov 2026: agent verified (role `evidence-agent`), 5/10 people (asha, ben, chen, elena, jon); farid, grace, hiro, isha, karan have no subname. `ens:probe` checks it. |
 | Evidence connectors | n/a | Deterministic connectors over `spec/fixtures/seed-scenario.json` "collect" steps | (real GitHub/Jira/CRM adapters are roadmap) | Demo data only. |
 
 Never present a mock proof as verified: mock World results, mock 0G traces and mock chain tx hashes are all
@@ -46,14 +47,16 @@ Optional variables the API also reads (all have defaults; not in the frozen `.en
 | `LOG_LEVEL` | `info` | pino level |
 | `RATE_LIMIT_PER_MIN` | `600` | global per-IP budget (route limits are capped by it) |
 | `CHAIN_AMOUNT_DIVISOR` | `1` | vault runs at 1/N of the real amounts (testnet funding); API amounts stay full scale, targets must divide exactly. Live uses `10000`; the UI must label it (CR-003) |
+| `ENS_RPC_URL` | public node | RPC for ENS reads (`ENS_NETWORK=sepolia|mainnet`) |
 | `WORLD_ENVIRONMENT` | `production` | expected World environment in `WORLD_MODE=live` (`staging` for the simulator) |
 
 | Command | Proves |
 |---|---|
 | `pnpm spec:check` | spec, fixtures, vectors (JS + Python + TS crypto), ABIs, generated types are consistent |
-| `pnpm --filter @proofwork/api test` | 107 tests: engine vs vectors and seed expectations, contract guard, claims F1, approvals, chain behaviour, verify, negative tests n01-n18, resilience |
+| `pnpm --filter @proofwork/api test` | 111 tests: engine vs vectors and seed expectations, contract guard, claims F1, approvals, chain behaviour, verify, negative tests n01-n18, resilience |
 | `pnpm e2e:demo` | full story s1 -> c1 -> v1 attest/release -> deny path -> s3 revert -> v2 + applyRevision -> s4 carry-forward -> shred, every number checked against the fixtures (in-process, ~1-2 s). `E2E_BASE_URL=http://localhost:8787` runs it against a server |
 | `pnpm --filter @proofwork/api demo:script [--live]` | prints the exact click order, ids and expected numbers for the demo video |
+| `pnpm --filter @proofwork/api ens:probe` | (live, read-only) resolves the agent and every person's subname and prints which match |
 | `pnpm --filter @proofwork/api chain:probe` | (live) chain id, roles granted to our two keys, asset decimals, cycle balances, gas |
 | `pnpm e2e:chain` | (live, G2) anchor + attest + registerPlan + release on Arc testnet. Uses a fresh random `ORG_SECRET` per run; **each run reserves testnet USDC from the cycle fund** |
 | `CHAIN_TEST_LIVE=1 pnpm --filter @proofwork/api test` | the ChainClient behaviour suite against the live contracts too |

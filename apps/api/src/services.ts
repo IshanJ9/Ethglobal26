@@ -26,6 +26,8 @@ import { VerifyService } from "./verify/service.ts";
 import { buildPublicConfig } from "./routes/meta.ts";
 import { defaultReplicaDir, makeReplicaStore, ReplicaService, type ReplicaStore } from "./replica/replica.ts";
 import { API_DIR } from "./config.ts";
+import { EnsDirectory } from "./ens/directory.ts";
+import { EnsResolver, type EnsLookup } from "./ens/resolver.ts";
 
 export interface ServiceOverrides {
   clock?: Clock;
@@ -35,6 +37,8 @@ export interface ServiceOverrides {
   chain?: ChainClient;
   connector?: Connector;
   replica?: ReplicaStore;
+  /** ENS reads; null disables. Default: a public-RPC resolver when ENS_NETWORK != none. */
+  ens?: EnsLookup | null;
 }
 
 export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m: string, d?: Record<string, unknown>) => void = () => {}) {
@@ -70,12 +74,16 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   const scorecardSvc = new ScorecardService(db, scorecards, org, compute, audit, envelope, world, config, clock);
   const chainSvc = new ChainService(db, chain, chains, scorecards, scorecardSvc, evidence, org, audit, config, clock);
   const agent = buildPublicConfig(config).agent;
-  const runs = new RunService(db, org, ledger, audit, clock, { ens_name: agent.ens_name, address: agent.address, agent_pass: "mock" }, o.connector, inference);
+  const agentIdentity = { ens_name: agent.ens_name, address: agent.address, agent_pass: "mock" as const };
+  const runs = new RunService(db, org, ledger, audit, clock, agentIdentity, o.connector, inference);
+  const ens = new EnsDirectory(config, db, agent.address, log);
+  ens.onAgentName((name) => (agentIdentity.ens_name = name));
+  ens.start(o.ens !== undefined ? o.ens : config.ENS_NETWORK === "none" ? null : new EnsResolver(config));
   const verify = new VerifyService(evidence, ledger, chains, chain, scorecards, claimsRepo, org);
 
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,
-    chain, chains, scorecardSvc, chainSvc, runs, verify, replica,
+    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens,
   };
 }
 export type Services = ReturnType<typeof buildServices>;

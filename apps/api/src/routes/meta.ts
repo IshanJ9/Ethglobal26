@@ -41,8 +41,10 @@ export function buildPublicConfig(c: Config): PublicConfig {
   };
 }
 
-export async function metaRoutes(app: FastifyInstance, opts: { config: Config }) {
-  const publicConfig = buildPublicConfig(opts.config);
+export async function metaRoutes(app: FastifyInstance, opts: { config: Config; agentName?: () => string }) {
+  const base = buildPublicConfig(opts.config);
+  // The agent ENS name upgrades to the full subname once the startup ENS check verifies it.
+  const publicConfig = () => (opts.agentName ? { ...base, agent: { ...base.agent, ens_name: opts.agentName() } } : base);
   app.get("/healthz", async () => ({ ok: true, spec_version: SPEC_VERSION }));
-  app.get("/v1/config/public", async () => publicConfig);
+  app.get("/v1/config/public", async () => publicConfig());
 }

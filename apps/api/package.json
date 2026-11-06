@@ -17,6 +17,7 @@
     "e2e:chain": "tsx scripts/e2e.ts --chain",
     "zerog:probe": "tsx scripts/zerog-probe.ts",
     "chain:probe": "tsx scripts/chain-probe.ts",
+    "ens:probe": "tsx scripts/ens-probe.ts",
     "demo:script": "tsx scripts/demo-script.ts"
   },
   "dependencies": {

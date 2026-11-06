@@ -67,6 +67,8 @@ const schema = z.object({
   ENS_PARENT_NAME: optStr,
   AGENT_ENS_NAME: z.string().default("kra-agent"),
   AGENT_ADDRESS: optStr.pipe(address.optional()),
+  /** RPC for ENS reads; defaults to a public node for ENS_NETWORK. */
+  ENS_RPC_URL: optStr,
 });
 
 export type Config = z.infer<typeof schema> & { dbPath: string };

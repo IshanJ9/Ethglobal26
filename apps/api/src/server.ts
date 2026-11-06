@@ -125,7 +125,7 @@ export async function buildApp(config: Config, opts: { logger?: boolean; service
     return reply.code(500).send(errors.internal("Internal error. Quote the request_id when reporting it.", { request_id: req.id }).toBody());
   });
 
-  await app.register(metaRoutes, { config });
+  await app.register(metaRoutes, { config, agentName: () => svc.ens.agentName });
   await app.register(coreRoutes, { svc });
   await app.register(claimRoutes, { svc });
   await app.register(flowRoutes, { svc });
