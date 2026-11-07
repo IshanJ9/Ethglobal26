@@ -1,5 +1,9 @@
 # Building the bonus pool in Arc Studio
 
+**Studio project (public share link):** https://studio.arc.io/share/solidity-contract-compiler-manager-qnzq3xhzoh
+
+**Studio-built dashboard (live, no wallet needed):** https://arc-studio-c8dc24d0ad1f4a509f481b8a.vercel.app. It reads the contract, role holders and every allocation straight from Arc testnet; role holders can connect a wallet to approve and release.
+
 Arc's rules: **"Every Arc prize requires using Arc Studio as the starting point"**, with a **shareable Arc Studio
 project URL** that judges can open, and **Studio shown in the demo**.
 

@@ -19,5 +19,7 @@
   "zkProofRegistry": "0x5ab3EFC23aC16cF22475EAd577888375aE21aE66",
   "zkProofRegistryNote": "ScoreProofRegistry: records Groth16 score proofs after verifyProof + anchored-commitment check; deploy tx 0xe35d1a76...1cfb",
   "bonusPool": "0x42d450d6dcaf980609ac23ea2639cabdfb8898cf",
-  "bonusPoolNote": "BonusPool: written, tested and deployed in Arc Studio from a Circle developer-controlled wallet (admin 0x1073fbc634efcd9cfd7b76aa02e6616374ceacba). ALLOCATOR = review agent, APPROVER/POOL_ADMIN/DISPUTER = payout key."
+  "bonusPoolNote": "BonusPool: written, tested and deployed in Arc Studio from a Circle developer-controlled wallet (admin 0x1073fbc634efcd9cfd7b76aa02e6616374ceacba). ALLOCATOR = review agent, APPROVER/POOL_ADMIN/DISPUTER = payout key.",
+  "bonusPoolStudioUrl": "https://studio.arc.io/share/solidity-contract-compiler-manager-qnzq3xhzoh",
+  "bonusPoolStudioApp": "https://arc-studio-c8dc24d0ad1f4a509f481b8a.vercel.app"
 }

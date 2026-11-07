@@ -24,7 +24,9 @@ CFO). Have World App and your passkey phone ready. The database is the live one 
 - **0G** reasoning takes about 20 s, and 0G Storage reads 3 to 25 s. Pages say when they fall back to the local copy.
 - **Arc** public RPCs rate-limit (429). Writes retry across two RPCs.
 - **World Agent Pass:** approve on the laptop page with *Continue with a passkey*. Doing the World App step on the same
-  phone as the browser can stall.
+  phone as the browser can stall. Approve in a **separate tab or on the phone** and keep the cluster page open: it
+  polls the checkpoint and starts the agent. If that tab navigated away, re-open `/clusters` and click *Prepare
+  review* again (the approval is single-use, so a fresh QR is expected).
 
 ## Live evidence already on chain (for the submission)
 
