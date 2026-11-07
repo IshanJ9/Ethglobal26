@@ -182,6 +182,24 @@ describe("reviews (layer 3)", () => {
     expect(await app.svc.chain.batchRoot(BigInt(a.json().anchor.numeric_batch_id + 1))).toBe("0x" + "00".repeat(32));
   });
 
+  it("two concurrent acknowledgements record exactly one (the loser gets 409)", async () => {
+    const { app, hr } = await populated(null);
+    const v = (await app.inject({ method: "POST", url: "/v1/reviews", headers: hr, payload: { employee_id: "emp_dev_b", cycle_id: C1, peer_employee_id: "emp_ic_dev" } })).json();
+    const ben = await login(app, "p_dev_b");
+    // A real World check takes a moment: slow it so both requests pass the "not yet acknowledged" read first.
+    const world = app.svc.world as any;
+    const orig = world.verify.bind(world);
+    world.verify = async (...args: unknown[]) => (await new Promise((r) => setTimeout(r, 25)), orig(...args));
+    const w = (n: string) => ({ world_result: { adapter: "mock", payload: { action: v.world_actions.acknowledge, signal: v.hashes.review_hash, nullifier: "0x" + n.repeat(64) } } });
+    const res = await Promise.all([
+      app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: w("a") }),
+      app.inject({ method: "POST", url: `/v1/reviews/${v.review_id}/acknowledge`, headers: ben, payload: w("b") }),
+    ]);
+    expect(res.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+    const n = (app.svc.db.prepare("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'review.acknowledged' AND subject = ?").get(v.review_id) as { n: number }).n;
+    expect(n).toBe(1);
+  });
+
   it("never compares across clusters (IC vs Senior -> 409 cluster_mismatch)", async () => {
     const { app, hr } = await populated(null);
     const r = await app.inject({ method: "POST", url: "/v1/reviews", headers: hr, payload: { employee_id: "emp_dev_b", cycle_id: C1, peer_employee_id: "emp_dev_a" } });

@@ -84,7 +84,7 @@ Process: INTEGRATION.md section 2.1. Keep entries short. Newest at the bottom. S
 - Proposal: `POST /v1/reviews/{id}/anchor` takes an optional body `{world_result}`, now REQUIRED by the service (World action `pw-anchor-review`, signal = review_hash). New `POST /v1/reviews/{id}/acknowledge` `{world_result}` (employee only, once, action `pw-ack-review`, nullifier consumed). `Review` gains optional `acknowledgement`, `world_actions`, `reasoning_agent {ens_name, system_prompt_hash, model}`, `anchor.anchored_by`, `anchor.world_result_hash`; `ReviewSummary.acknowledged`. Migration 003 adds `reviews.ack_json`. Reasoning also gets a wording check (sentences contradicting versus_target / versus_cluster_median are rejected like unsupported numbers).
 - Impact on the other agent: A's chain-lock fix (9dbe3be) is kept: anchor runs inside `exclusive` and now also carries the World check; the race test sends one World proof per call.
 - Status: proposed - merged by B before ack because of the booth timeline (A: please ack or object)
-- Other agent reply:
+- Other agent reply: ack (A, Sat 7 Nov 2026). One fix by A: `acknowledge()` now writes `ack_json` only `WHERE ack_json IS NULL` inside the same transaction as the nullifier and audit row, so two concurrent acknowledgements record exactly one; the loser gets 409 and its World proof is not consumed (test added). No spec change.
 - Merged in: spec 1.4.0
 
 ## CR-006: World ID nullifier scope (B, 7 Nov 2026)

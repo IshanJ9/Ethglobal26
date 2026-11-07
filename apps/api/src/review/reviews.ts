@@ -285,7 +285,9 @@ export class ReviewService {
     const ack = { acknowledged_by: viewer.employee_id, acknowledged_at: at, world_result_hash: wrh, world_mode: this.world.mode };
     this.db.transaction(() => {
       if (!consumeNullifier(this.db, nullifier, `${ackAction}:${id}`, at)) throw new ApiError(401, "world_verification_failed", "World proof was already used (replay)");
-      this.db.prepare("UPDATE reviews SET ack_json = ? WHERE review_id = ?").run(JSON.stringify(ack), id);
+      // Conditional write: a concurrent second acknowledgement loses here and rolls back (its World proof stays unused).
+      const res = this.db.prepare("UPDATE reviews SET ack_json = ? WHERE review_id = ? AND ack_json IS NULL").run(JSON.stringify(ack), id);
+      if (res.changes === 0) throw errors.invalidState("Review already acknowledged");
       this.audit.append(at, viewer.persona_id, "review.acknowledged", id, { review_hash: review.hashes.review_hash, world_result_hash: wrh });
     })();
     return { ...review, acknowledgement: ack };
