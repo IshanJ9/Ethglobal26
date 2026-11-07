@@ -134,10 +134,17 @@ export class ChainService {
     const result = JSON.parse(sc.result_json) as ComputeResult;
     const plan = this.org.plan(employee.plan_id)!;
     const supersedes = await this.chain.latestAttestation(subject, cyc);
+    // The registry keeps history across DB resets: if it already holds a version for this subject and cycle
+    // (e.g. attested before a re-seed), this attestation must supersede it with a higher version.
+    let chainVersion = sc.version;
+    if (supersedes !== 0n) {
+      const prev = await this.chain.getAttestation(supersedes);
+      if (Number(prev.version) >= chainVersion) chainVersion = Number(prev.version) + 1;
+    }
     const att = await this.chain.attestScore({
       subjectId: subject,
       cycleId: cyc,
-      version: sc.version,
+      version: chainVersion,
       scoreCommitment: sc.score_commitment as Hex,
       evidenceRoot: sc.evidence_root as Hex,
       formulaHash: plan.formula_hash as Hex,
