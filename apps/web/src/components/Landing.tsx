@@ -237,7 +237,7 @@ export function Landing() {
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/login" className="inline-flex items-center gap-2.5 rounded-full bg-accent px-6 py-[15px] text-[15px] font-semibold text-on-accent hover:bg-accent-hover hover:text-on-accent">
-                Try the demo
+                Try it live
               </Link>
               <Link href="/verify" className="inline-flex items-center gap-2.5 rounded-full border border-ink/30 px-[22px] py-[14px] text-[15px] text-ink hover:border-accent">
                 Verify a record
@@ -382,7 +382,7 @@ export function Landing() {
       <Band id="demo" tinted>
         <div className="grid items-end gap-x-14 gap-y-6 lg:grid-cols-2">
           <H2>The three-minute <em className="text-accent">walkthrough.</em></H2>
-          <p className="m-0 max-w-[520px] text-[17px] leading-[1.6] text-ink-2">Pick a persona on the demo screen and follow the story. Nothing to install.</p>
+          <p className="m-0 max-w-[520px] text-[17px] leading-[1.6] text-ink-2">Sign in as a team member and follow the story. Nothing to install.</p>
         </div>
         <ol className="flex flex-col border-t border-line">
           {DEMO.map((d, i) => (
@@ -395,7 +395,7 @@ export function Landing() {
         </ol>
         <div>
           <Link href="/login" className="inline-flex items-center rounded-full bg-accent px-6 py-[15px] text-[15px] font-semibold text-on-accent hover:bg-accent-hover hover:text-on-accent">
-            Choose a persona
+            Sign in as a team member
           </Link>
         </div>
       </Band>
@@ -434,7 +434,7 @@ export function Landing() {
           <span>Proofwork · ETHGlobal Mumbai 2026</span>
           <span className="flex gap-5">
             <Link href="/verify" className="text-muted hover:text-accent">Verify</Link>
-            <Link href="/login" className="text-muted hover:text-accent">Demo</Link>
+            <Link href="/login" className="text-muted hover:text-accent">Try it live</Link>
             <Link href="/#how" className="text-muted hover:text-accent">How it works</Link>
           </span>
         </div>

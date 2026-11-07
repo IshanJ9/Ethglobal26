@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { setSession, useSession } from "@/lib/session";
@@ -40,6 +41,11 @@ export function AppHeader() {
     router.push("/login");
   }
 
+  // The session lives in sessionStorage, so the server (and a cold load still compiling) cannot know it.
+  // Until the client has hydrated, show a neutral header rather than the signed-out one.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
   // Signed-out visitors on / see the landing page, which explains the pipeline itself.
   const onLanding = !session && pathname === "/";
 
@@ -51,7 +57,9 @@ export function AppHeader() {
             <Link href="/" className="text-ink hover:text-ink">
               <Wordmark />
             </Link>
-            {session && session.persona.role !== "external_cosigner" ? (
+            {!hydrated ? (
+              <span aria-hidden className="h-5 w-48 rounded-full bg-line/60" />
+            ) : session && session.persona.role !== "external_cosigner" ? (
               <nav className="flex flex-wrap text-[15px]">
                 <Link href="/" className={NAV}>My cycle</Link>
                 <Link href="/claims/new" className={NAV}>New claim</Link>
@@ -72,7 +80,7 @@ export function AppHeader() {
               <nav className="flex flex-wrap text-[15px]">
                 {!session ? <Link href="/#how" className={NAV}>How it works</Link> : null}
                 <Link href="/verify" className={NAV}>Verify</Link>
-                {!session ? <Link href="/login" className={NAV}>Try the demo</Link> : null}
+                {!session ? <Link href="/login" className={NAV}>Try it live</Link> : null}
               </nav>
             )}
           </div>
@@ -92,7 +100,7 @@ export function AppHeader() {
             >
               {theme === "dark" ? "Light" : "Dark"}
             </button>
-            {session ? (
+            {hydrated && session ? (
               <>
                 <span className="flex flex-col items-end leading-tight">
                   <span className="font-medium">{session.persona.display_name}</span>
@@ -105,7 +113,7 @@ export function AppHeader() {
             ) : null}
           </div>
         </div>
-        {onLanding ? null : <ProvenanceStrip />}
+        {!hydrated || onLanding ? null : <ProvenanceStrip />}
       </div>
     </header>
   );
