@@ -3,7 +3,7 @@
   "chainId": 5042002,
   "rpcUrl": "https://rpc.testnet.arc.io",
   "explorerBaseUrl": "https://explorer.testnet.arc.io",
-  "studioUrl": "",
+  "studioUrl": "https://studio.arc.io/share/solidity-contract-compiler-manager-qnzq3xhzoh",
   "registry": "0x9ab5E0cc44b7336DE8306c9f2F91d7cC832d5112",
   "vault": "0x3FE940C4F1464d769795d24157037BEf7C3ec97F",
   "asset": "0x3600000000000000000000000000000000000000",

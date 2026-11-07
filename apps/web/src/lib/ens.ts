@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { createPublicClient, getAddress, http, type PublicClient } from "viem";
+import { createPublicClient, fallback, getAddress, http, type PublicClient } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 import { normalize } from "viem/ens";
 import { usePublicConfig } from "./config";
@@ -15,16 +15,23 @@ import ensManifest from "../../../../deployments/ens.json";
 type Net = "sepolia" | "mainnet";
 const clients: Partial<Record<Net, PublicClient>> = {};
 // viem's built-in Sepolia default (rpc.sepolia.org) does not answer (checked 6 Nov 2026), so name our own defaults.
-const DEFAULT_RPC: Record<Net, string> = {
-  sepolia: "https://ethereum-sepolia-rpc.publicnode.com",
-  mainnet: "https://ethereum-rpc.publicnode.com",
+// Several public RPCs: each one rate-limits (429) a directory page that resolves ~48 names, so fall back across them.
+const DEFAULT_RPC: Record<Net, string[]> = {
+  sepolia: ["https://ethereum-sepolia-rpc.publicnode.com", "https://sepolia.gateway.tenderly.co", "https://1rpc.io/sepolia"],
+  mainnet: ["https://ethereum-rpc.publicnode.com"],
 };
+
+/** Sepolia transport with fallback + retries across public RPCs (reads and signed writes). */
+export const sepoliaTransport = () =>
+  fallback((process.env.NEXT_PUBLIC_ENS_RPC_URL ? [process.env.NEXT_PUBLIC_ENS_RPC_URL] : DEFAULT_RPC.sepolia).map((u) => http(u, { timeout: 20000, retryCount: 2, retryDelay: 800 })));
 
 function client(net: Net): PublicClient {
   if (!clients[net]) {
     const chain = net === "sepolia" ? sepolia : mainnet;
     // multicall batching: a directory page resolves ~40 names x several records in a handful of RPC calls
-    clients[net] = createPublicClient({ chain, batch: { multicall: true }, transport: http(process.env.NEXT_PUBLIC_ENS_RPC_URL || DEFAULT_RPC[net], { timeout: 15000 }) }) as PublicClient;
+    clients[net] = createPublicClient({ chain, batch: { multicall: true }, transport: fallback(
+        (process.env.NEXT_PUBLIC_ENS_RPC_URL ? [process.env.NEXT_PUBLIC_ENS_RPC_URL] : DEFAULT_RPC[net]).map((u) => http(u, { timeout: 15000, retryCount: 2, retryDelay: 800 })),
+      ) }) as PublicClient;
   }
   return clients[net]!;
 }
@@ -35,12 +42,16 @@ function useNet(): Net | null {
   return n === "sepolia" || n === "mainnet" ? n : null;
 }
 
-const soft = async <T,>(f: () => Promise<T>): Promise<T | null> => {
-  try {
-    return await f();
-  } catch {
-    return null;
+// Fails soft, but only after retrying: public RPCs drop calls under load (429), which is not "no record".
+const soft = async <T,>(f: () => Promise<T>, attempts = 3): Promise<T | null> => {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await f();
+    } catch {
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 700 * (i + 1) + Math.random() * 500));
+    }
   }
+  return null;
 };
 
 /** Reverse lookup: address -> primary ENS name (only if it forward-resolves back, which viem checks). */

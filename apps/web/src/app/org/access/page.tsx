@@ -1,7 +1,8 @@
 "use client";
 
+import { sepoliaTransport } from "@/lib/ens";
 import { useEffect, useState } from "react";
-import { createPublicClient, createWalletClient, http, parseAbi, toHex, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, parseAbi, toHex, type Address, type Hex } from "viem";
 import { packetToBytes } from "viem/ens";
 import { sepolia } from "viem/chains";
 import manifest from "../../../../../../deployments/ens.json";
@@ -16,9 +17,8 @@ type Entry = { name: string; kind: string; addr?: string; text: Record<string, s
 type Roles = { resolvers: Record<string, string>; roles?: { admin: string; hr: string; managers: Record<string, string>; manager_keys: string[]; issuer: string; review_agent: string; aliases: Record<string, string> } };
 const R = rolesJson as unknown as Roles;
 const NAMES = (manifest.names as unknown as Entry[]).filter((e) => e.kind === "person");
-const RPC = process.env.NEXT_PUBLIC_ENS_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
 const EXPLORER = "https://sepolia.etherscan.io";
-const pub = createPublicClient({ chain: sepolia, transport: http(RPC, { timeout: 20000 }) });
+const pub = createPublicClient({ chain: sepolia, transport: sepoliaTransport() });
 const ABI = parseAbi([
   "function setText(bytes name, string key, string value)",
   "function setAddress(bytes name, uint256 coinType, bytes addressBytes)",
@@ -93,7 +93,7 @@ export default function AccessPage() {
       const sim = await pub.simulateContract({ ...c, account: acct } as any).catch((e: Error) => {
         throw new Error(`Denied by the resolver's access control (EAC): ${actorLabel(actor)} has no role for setText("${key}") on ${short(target)}. ${e.message.split("\n")[0]}`);
       });
-      const w = createWalletClient({ chain: sepolia, account: acct, transport: http(RPC) });
+      const w = createWalletClient({ chain: sepolia, account: acct, transport: sepoliaTransport() });
       const tx = await w.writeContract(sim.request);
       await pub.waitForTransactionReceipt({ hash: tx });
       // public RPCs are load-balanced: poll until a node that has the new block answers

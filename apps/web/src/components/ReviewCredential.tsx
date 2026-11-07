@@ -1,8 +1,9 @@
 "use client";
 
+import { sepoliaTransport } from "@/lib/ens";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createPublicClient, createWalletClient, getAddress, http, keccak256, parseAbi, stringToBytes, type Hex } from "viem";
+import { createPublicClient, createWalletClient, getAddress, keccak256, parseAbi, stringToBytes, type Hex } from "viem";
 import { sepolia } from "viem/chains";
 import ens from "../../../../deployments/ens.json";
 import { useEnsRecords } from "@/lib/ens";
@@ -13,7 +14,6 @@ import { Button, HashPill } from "@/components/ui";
 // The review's ENS credential: r-<hash8>.<parent>, registered by the backend issuer when HR anchors the review.
 // Owned by the employee, expiring, non-transferable (roleBitmap 0); only HR (UNREGISTER role) can revoke it.
 const M = ens as unknown as { parent: string; subregistry: string };
-const RPC = process.env.NEXT_PUBLIC_ENS_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
 const REG = parseAbi(["function ownerOf(uint256 tokenId) view returns (address)", "function getTokenId(uint256 anyId) view returns (uint256)", "function getExpiry(uint256 anyId) view returns (uint64)", "function unregister(uint256 anyId)"]);
 const KEYS = ["role", "review_hash", "anchor_tx", "anchor_chain", "employee", "issued_by"];
 
@@ -29,7 +29,7 @@ export function ReviewCredential({ reviewHash, employeeId, isHr, anchored }: { r
     enabled: anchored,
     staleTime: 60_000,
     queryFn: async () => {
-      const c = createPublicClient({ chain: sepolia, transport: http(RPC) });
+      const c = createPublicClient({ chain: sepolia, transport: sepoliaTransport() });
       const id = BigInt(keccak256(stringToBytes(label)));
       const address = M.subregistry as Hex;
       const tokenId = await c.readContract({ address, abi: REG, functionName: "getTokenId", args: [id] });
@@ -51,10 +51,10 @@ export function ReviewCredential({ reviewHash, employeeId, isHr, anchored }: { r
   async function revoke() {
     setBusy(true); setMsg(null);
     try {
-      const pub = createPublicClient({ chain: sepolia, transport: http(RPC) });
+      const pub = createPublicClient({ chain: sepolia, transport: sepoliaTransport() });
       const hr = demoAccount("p_hr");
       const sim = await pub.simulateContract({ account: hr, address: M.subregistry as Hex, abi: REG, functionName: "unregister", args: [BigInt(keccak256(stringToBytes(label)))] });
-      const tx = await createWalletClient({ chain: sepolia, account: hr, transport: http(RPC) }).writeContract(sim.request);
+      const tx = await createWalletClient({ chain: sepolia, account: hr, transport: sepoliaTransport() }).writeContract(sim.request);
       await pub.waitForTransactionReceipt({ hash: tx });
       setMsg({ ok: true, text: "Revoked by HR. The name no longer exists on ENS.", tx });
     } catch (e) {
