@@ -1,4 +1,4 @@
-// pnpm --filter @proofwork/api exec tsx scripts/replicate-0g.ts [--cluster software.ic | --all] [--cycle cyc_2026h2] [--limit N] [--employee emp_x] [--force]
+// pnpm --filter @proofwork/api exec tsx scripts/replicate-0g.ts [--cluster software.ic | --all] [--cycle cyc_2026h2] [--limit N] [--employee emp_x] [--force] [--verify]
 // CR-004: moves the ENCRYPTED evidence payloads of existing items from the local replica to 0G Storage
 // (items ingested while 0G storage was not configured). The payload is the same sealed ciphertext the
 // ledger stores (record-key encrypted); 0G never sees plaintext. After upload the evidence row points at
@@ -24,6 +24,16 @@ const cycle = arg("cycle") ?? "cyc_2026h2";
 const limit = Number(arg("limit") ?? 10_000);
 const onlyEmployee = arg("employee"); // e.g. --employee emp_dev_a
 const force = process.argv.includes("--force"); // re-upload even if a root is recorded (0G copy missing)
+const verify = process.argv.includes("--verify"); // ask 0G about every recorded root; re-upload only the missing ones
+const onZeroG = async (root: string): Promise<boolean> => {
+  try {
+    const res = await fetch(c.ZEROG_STORAGE_INDEXER!, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "indexer_getFileLocations", params: [root] }), signal: AbortSignal.timeout(15_000) });
+    const j: any = await res.json();
+    return Array.isArray(j?.result) && j.result.length > 0;
+  } catch {
+    return true; // indexer unreachable: don't re-upload blindly
+  }
+};
 
 const db = openDb(c.dbPath);
 loadOrgFixtures(db);
@@ -35,12 +45,22 @@ const localDir = join(API_DIR, "data", "replica");
 const people = org.employees().filter((e) => (cluster ? clusterIdOf(e) === cluster : true));
 const rows = people.filter((e) => !onlyEmployee || e.employee_id === onlyEmployee).flatMap((e) => ev.forEmployeeCycle(e.employee_id, cycle));
 // only items whose replica is still the local file (or missing); 0G-rooted items are skipped
-const todo = rows.filter((r) => {
+const todo0 = rows.filter((r) => {
   const s = ev.secrets(r.evidence_id);
   if (!s?.payload_enc) return false; // shredded
   if (!r.replica_root || force) return true;
   return existsSync(join(localDir, `${r.replica_root}.bin`));
-}).slice(0, limit);
+});
+if (verify) {
+  const keep: typeof todo0 = [];
+  for (const r of rows) {
+    if (todo0.includes(r)) { keep.push(r); continue; }
+    const s = ev.secrets(r.evidence_id);
+    if (s?.payload_enc && r.replica_root && !(await onZeroG(r.replica_root))) keep.push(r);
+  }
+  todo0.splice(0, todo0.length, ...keep);
+}
+const todo = todo0.slice(0, limit);
 console.log(`${people.length} people (${cluster ?? "all clusters"}), ${rows.length} evidence items, ${todo.length} to move to 0G Storage`);
 
 let ok = 0;
