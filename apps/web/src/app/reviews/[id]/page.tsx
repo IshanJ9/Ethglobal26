@@ -77,6 +77,7 @@ export default function ReviewPage() {
   return (
     <div className="flex max-w-5xl flex-col gap-6 print:max-w-none">
       <PageTitle
+        crumbs={[{ label: "Reviews", href: "/reviews" }, { label: r.display_name }]}
         title={`${r.display_name} · bonus review`}
         sub={`${r.cluster.label} · ${plan} · ${r.cycle_id}`}
         right={

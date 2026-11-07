@@ -17,7 +17,7 @@ export default function PayoutPage() {
   if (!me) return null;
   return (
     <div className="flex flex-col gap-6">
-      <PageTitle title="Payout" sub={sc.data ? `Scorecard v${sc.data.version}` : undefined} right={<TextLink href={`/scorecards/${scorecard}`}>Open scorecard</TextLink>} />
+      <PageTitle crumbs={[{ label: "Scorecard", href: `/scorecards/${scorecard}` }, { label: "Payout" }]} title="Payout" sub={sc.data ? `Scorecard v${sc.data.version}` : undefined} right={<TextLink href={`/scorecards/${scorecard}`}>Open scorecard</TextLink>} />
       <Card>
         {payout.isLoading ? <Loading /> : payout.data ? <PayoutPanel payout={payout.data} chainMode={cfg?.chain_mode ?? "mock"} /> : <ErrorNote error={payout.error} />}
       </Card>

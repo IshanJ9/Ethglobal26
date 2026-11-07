@@ -22,15 +22,21 @@ function Timeline({ state }: { state: Schemas["ClaimState"] }) {
   const terminalBad = ["declined", "expired", "rejected", "disputed"].includes(state);
   const idx = terminalBad ? 1 : Math.max(0, STEPS.findIndex((s) => s.state === state || (state === "submitted" && s.state === "pending_cosign")));
   return (
-    <ol className="flex flex-wrap items-center gap-2 text-sm">
-      {STEPS.map((s, i) => (
-        <li key={s.state} className="flex items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 ${i <= idx ? "bg-ink text-surface" : "border border-line text-muted"}`}>{s.label}</span>
-          {i < STEPS.length - 1 ? <span aria-hidden className="text-muted">→</span> : null}
-        </li>
-      ))}
-      {terminalBad ? <StatusChip status={state} /> : null}
-    </ol>
+    <div className="flex flex-col gap-3">
+      <ol className="grid overflow-hidden rounded-xl border border-line bg-surface sm:grid-cols-3">
+        {STEPS.map((s, i) => (
+          <li
+            key={s.state}
+            aria-current={i === idx ? "step" : undefined}
+            className={`border-line px-5 py-4 text-[15px] [&:not(:first-child)]:border-t sm:[&:not(:first-child)]:border-l sm:[&:not(:first-child)]:border-t-0 ${i < idx ? "text-ink" : i === idx ? "text-accent" : "text-muted"}`}
+          >
+            <span className="font-mono text-[13px]">{i < idx ? "✓" : i === idx ? "●" : "○"} {i + 1}</span>
+            <div className="mt-0.5 font-semibold">{s.label}</div>
+          </li>
+        ))}
+      </ol>
+      {terminalBad ? <div><StatusChip status={state} /></div> : null}
+    </div>
   );
 }
 
@@ -52,7 +58,7 @@ function GrantPanel({ claim }: { claim: Schemas["Claim"] }) {
           Send this link to {claim.cosigner_label}. It works once and expires {new Date(grant.expires_at).toLocaleString()}. It is shown only now.
         </p>
         <div className="flex items-center gap-2">
-          <input readOnly value={link} className="w-full rounded-md border border-line bg-paper px-2 py-1.5 font-mono text-xs" onFocus={(e) => e.target.select()} />
+          <input readOnly value={link} className="w-full rounded-[10px] border border-line bg-paper px-2 py-1.5 font-mono text-xs" onFocus={(e) => e.target.select()} />
           <Button kind="secondary" onClick={() => navigator.clipboard?.writeText(link)}>Copy</Button>
         </div>
         <TextLink href={grant.url}>Open as the co-signer (demo)</TextLink>
@@ -98,6 +104,7 @@ export default function ClaimPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageTitle
+        crumbs={[{ label: "My cycle", href: "/" }, { label: "Claims" }, { label: <span className="font-mono">{c.claim_id}</span> }]}
         title={b.summary || "Claim"}
         sub={<>{c.kra_id.replace(/_/g, " ")} · co-signer {c.cosigner_label}</>}
         right={<Button kind="secondary" onClick={() => qc.invalidateQueries({ queryKey: ["claim", id] })}>Refresh</Button>}

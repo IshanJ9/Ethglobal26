@@ -45,7 +45,7 @@ export default function NewClaimPage() {
 
   return (
     <div className="max-w-3xl">
-      <PageTitle title="New claim" sub="Describe work that someone outside the company can confirm. The AI drafts a structured claim; you review and sign it." />
+      <PageTitle crumbs={[{ label: "My cycle", href: "/" }, { label: "Claims" }, { label: "New" }]} title="File a claim" sub="Describe work that someone outside the company can confirm. The AI drafts a structured claim; you review and sign it." />
 
       {plan.isLoading || cycles.isLoading || employees.isLoading ? <Loading /> : null}
       <ErrorNote error={plan.error ?? cycles.error ?? employees.error} />

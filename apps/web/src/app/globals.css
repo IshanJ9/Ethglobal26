@@ -83,6 +83,12 @@ body {
   textarea {
     background-color: rgb(var(--paper));
     color: rgb(var(--ink));
+    border-radius: 10px;
+  }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    border-color: rgb(var(--accent));
   }
   input::placeholder,
   textarea::placeholder {

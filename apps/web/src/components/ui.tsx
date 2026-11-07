@@ -7,24 +7,39 @@ import { formatUsdc, shortHex } from "@/lib/format";
 
 // Shared building blocks, styled to the Proofwork design (Newsreader display, Plex body, pill actions).
 
-export function PageTitle({ title, sub, right }: { title: ReactNode; sub?: ReactNode; right?: ReactNode }) {
+/** Breadcrumb trail above a page title (design: "My cycle / Claims / New"). Items without href are plain text. */
+export type Crumb = { label: ReactNode; href?: string };
+
+export function PageTitle({ title, sub, right, crumbs }: { title: ReactNode; sub?: ReactNode; right?: ReactNode; crumbs?: Crumb[] }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="text-balance font-display text-[clamp(34px,4vw,48px)] font-light leading-[1.02] tracking-[-0.02em]">{title}</h1>
-        {sub ? <p className="mt-2 max-w-2xl text-ink-2">{sub}</p> : null}
+    <div className="mb-8">
+      {crumbs?.length ? (
+        <nav aria-label="Breadcrumb" className="mb-3 text-sm text-muted">
+          {crumbs.map((c, i) => (
+            <span key={i}>
+              {i ? <span aria-hidden className="mx-1.5">/</span> : null}
+              {c.href ? <Link href={c.href} className="text-ink hover:text-accent">{c.label}</Link> : c.label}
+            </span>
+          ))}
+        </nav>
+      ) : null}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-balance font-display text-[clamp(36px,4.6vw,52px)] font-light leading-[1.05] tracking-[-0.02em]">{title}</h1>
+          {sub ? <p className="mt-3 max-w-[680px] text-pretty text-[clamp(16px,1.6vw,19px)] leading-[1.5] text-muted">{sub}</p> : null}
+        </div>
+        {right}
       </div>
-      {right}
     </div>
   );
 }
 
 export function Card({ title, right, children, className = "" }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-[14px] border border-line bg-surface p-5 sm:p-6 ${className}`}>
+    <section className={`rounded-xl border border-line bg-surface p-5 sm:p-6 ${className}`}>
       {title || right ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          {title ? <h2 className="font-display text-2xl font-normal leading-tight">{title}</h2> : <span />}
+          {title ? <h2 className="text-base font-semibold leading-snug">{title}</h2> : <span />}
           {right}
         </div>
       ) : null}
@@ -33,12 +48,15 @@ export function Card({ title, right, children, className = "" }: { title?: React
   );
 }
 
+/** Small mono label used above numbers (design `lbl`). */
+export const LABEL = "font-mono text-xs uppercase tracking-[0.04em] text-muted";
+
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
     <div>
-      <div className="text-sm text-muted">{label}</div>
-      <div className="mt-1 font-display text-[34px] font-light leading-none tabular-nums">{value}</div>
-      {sub ? <div className="mt-1.5 text-xs text-muted">{sub}</div> : null}
+      <div className={LABEL}>{label}</div>
+      <div className="mt-1.5 font-display text-[clamp(32px,3.4vw,44px)] font-normal leading-none tracking-[-0.02em] tabular-nums">{value}</div>
+      {sub ? <div className="mt-2 text-[13px] text-muted">{sub}</div> : null}
     </div>
   );
 }

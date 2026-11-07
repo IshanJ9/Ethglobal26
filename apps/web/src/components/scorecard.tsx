@@ -14,7 +14,7 @@ export function ScoreBreakdown({ result, labels }: { result: Schemas["ComputeRes
     <div className="flex flex-col gap-4">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-muted">
+          <thead className="text-left font-mono text-xs uppercase tracking-[0.04em] text-muted">
             <tr className="border-b border-line">
               <th className="py-2 pr-3 font-medium">KRA</th>
               <th className="py-2 pr-3 text-right font-medium">Actual</th>
@@ -45,20 +45,20 @@ export function ScoreBreakdown({ result, labels }: { result: Schemas["ComputeRes
         <span className="ml-2 font-mono">formula <HashPill value={result.formula_hash} /></span>
       </p>
 
-      <div className={`rounded-md border px-3 py-2 text-sm ${result.gate_passed ? "border-chain/40 bg-chain/10 text-chain" : "border-danger/40 bg-danger/10 text-danger"}`}>
+      <div className={`rounded-[10px] border px-4 py-3 text-[15px] ${result.gate_passed ? "border-ok text-ok" : "border-danger text-danger"}`}>
         Evidence verified {formatBps(result.verified_ratio_bps)} -{" "}
         {result.gate_passed ? "gate passed, a bonus can be paid." : "gate failed: too little evidence is verified yet to pay a bonus."}
       </div>
 
       {result.carry_forward?.prior_score_bps != null ? (
-        <div className="rounded-md border border-code/40 bg-code/10 px-3 py-2 text-sm text-code">
+        <div className="rounded-[10px] border border-code px-4 py-3 text-sm text-code">
           Carry-forward: last cycle {formatBps(result.carry_forward.prior_score_bps)} weighted{" "}
           {formatBps(result.carry_forward.history_weight_bps ?? 0)} gives a blended score of {formatBps(result.carry_forward.blended_score_bps ?? result.score_bps)}.
         </div>
       ) : null}
 
       {result.bug_credit?.tiers_milli ? (
-        <div className="rounded-md border border-line px-3 py-2 text-sm">
+        <div className="rounded-[10px] border border-line px-4 py-3 text-sm">
           <div className="font-medium">Bug-fix credit: {((result.bug_credit.total_milli ?? 0) / 1000).toLocaleString("en-US")} points</div>
           <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted">
             {Object.entries(result.bug_credit.tiers_milli).map(([tier, v]) => (
@@ -85,7 +85,7 @@ export function EvidenceTable({
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="text-left text-xs uppercase tracking-wide text-muted">
+        <thead className="text-left font-mono text-xs uppercase tracking-[0.04em] text-muted">
           <tr className="border-b border-line">
             <th className="py-2 pr-3 font-medium">Source</th>
             <th className="py-2 pr-3 font-medium">What</th>
@@ -148,16 +148,16 @@ export function RevisionDiff({ diff, labels, from, to }: { diff: Schemas["Scorec
     <div className="flex flex-col gap-3 text-sm">
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <div className="text-xs uppercase text-muted">Score</div>
-          <div className="tabular-nums">{from ? formatBps(from.result.score_bps) : "?"} → <b>{formatBps(to.result.score_bps)}</b> <span className={diff.score_bps_delta < 0 ? "text-danger" : "text-chain"}>({sign(diff.score_bps_delta)}{formatBps(diff.score_bps_delta)})</span></div>
+          <div className="font-mono text-xs uppercase tracking-[0.04em] text-muted">Score</div>
+          <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] tabular-nums">{from ? formatBps(from.result.score_bps) : "?"} → <b>{formatBps(to.result.score_bps)}</b> <span className={diff.score_bps_delta < 0 ? "text-danger" : "text-ok"}>({sign(diff.score_bps_delta)}{formatBps(diff.score_bps_delta)})</span></div>
         </div>
         <div>
-          <div className="text-xs uppercase text-muted">Multiplier</div>
-          <div className="tabular-nums">{from ? formatBps(from.result.multiplier_bps) : "?"} → <b>{formatBps(to.result.multiplier_bps)}</b></div>
+          <div className="font-mono text-xs uppercase tracking-[0.04em] text-muted">Multiplier</div>
+          <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] tabular-nums">{from ? formatBps(from.result.multiplier_bps) : "?"} → <b>{formatBps(to.result.multiplier_bps)}</b></div>
         </div>
         <div>
-          <div className="text-xs uppercase text-muted">Bonus</div>
-          <div className="tabular-nums">{from ? formatUsdc(from.result.bonus_amount) : "?"} → <b>{formatUsdc(to.result.bonus_amount)}</b></div>
+          <div className="font-mono text-xs uppercase tracking-[0.04em] text-muted">Bonus</div>
+          <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] tabular-nums">{from ? formatUsdc(from.result.bonus_amount) : "?"} → <b>{formatUsdc(to.result.bonus_amount)}</b></div>
         </div>
       </div>
       {diff.line_changes.length ? (
@@ -170,7 +170,7 @@ export function RevisionDiff({ diff, labels, from, to }: { diff: Schemas["Scorec
         </ul>
       ) : null}
       {diff.evidence_removed.length ? <p className="text-danger">Evidence removed: {diff.evidence_removed.join(", ")}</p> : null}
-      {diff.evidence_added.length ? <p className="text-chain">Evidence added: {diff.evidence_added.join(", ")}</p> : null}
+      {diff.evidence_added.length ? <p className="text-ok">Evidence added: {diff.evidence_added.join(", ")}</p> : null}
     </div>
   );
 }
@@ -182,21 +182,21 @@ export function PayoutPanel({ payout, chainMode }: { payout: Schemas["Payout"]; 
   const idx = PAY_STEPS.indexOf(payout.status);
   return (
     <div className="flex flex-col gap-4 text-sm">
-      <ol className="flex flex-wrap items-center gap-2">
+      <ol className="grid overflow-hidden rounded-xl border border-line bg-paper sm:grid-cols-3">
         {PAY_STEPS.map((s, i) => (
-          <li key={s} className="flex items-center gap-2">
-            <span className={`rounded-full px-2.5 py-1 ${idx >= i ? "bg-ink text-surface" : "border border-line text-muted"}`}>{PAY_LABEL[s]}</span>
-            {i < PAY_STEPS.length - 1 ? <span aria-hidden className="text-muted">→</span> : null}
+          <li key={s} aria-current={idx === i ? "step" : undefined} className={`border-line px-5 py-3.5 text-[15px] [&:not(:first-child)]:border-t sm:[&:not(:first-child)]:border-l sm:[&:not(:first-child)]:border-t-0 ${idx > i ? "text-ink" : idx === i ? "text-accent" : "text-muted"}`}>
+            <span className="font-mono text-[13px]">{idx > i ? "✓" : idx === i ? "●" : "○"} {i + 1}</span>
+            <div className="mt-0.5 font-semibold">{PAY_LABEL[s]}</div>
           </li>
         ))}
-        {payout.status === "disputed" ? <StatusChip status="disputed" /> : null}
       </ol>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-3">
+      {payout.status === "disputed" ? <div><StatusChip status="disputed" /></div> : null}
+      <dl className="grid grid-cols-2 gap-3 md:grid-cols-3 [&>div]:rounded-xl [&>div]:border [&>div]:border-line [&>div]:bg-paper [&>div]:p-4 [&_dd]:mt-1.5 [&_dd]:text-[22px] [&_dd]:tracking-[-0.02em] [&_dt]:font-mono [&_dt]:tracking-[0.04em]">
         <div><dt className="text-xs uppercase text-muted">Target</dt><dd><Money amount={payout.target_bonus} /></dd></div>
         <div><dt className="text-xs uppercase text-muted">Entitlement</dt><dd className="font-semibold"><Money amount={payout.entitlement} /></dd></div>
         <div><dt className="text-xs uppercase text-muted">Paid</dt><dd><Money amount={payout.paid} /></dd></div>
         <div><dt className="text-xs uppercase text-muted">Held back</dt><dd><Money amount={payout.held} /></dd></div>
-        <div><dt className="text-xs uppercase text-muted">Forfeited</dt><dd className={BigInt(payout.forfeited) > 0n ? "font-semibold text-danger" : ""}><Money amount={payout.forfeited} /></dd></div>
+        <div><dt className="text-xs uppercase text-muted">Forfeited</dt><dd className={BigInt(payout.forfeited) > 0n ? "text-danger" : ""}><Money amount={payout.forfeited} /></dd></div>
         <div><dt className="text-xs uppercase text-muted">Overpaid</dt><dd><Money amount={payout.overpaid} /></dd></div>
       </dl>
       <div className="flex flex-wrap items-center gap-3 text-xs text-muted">

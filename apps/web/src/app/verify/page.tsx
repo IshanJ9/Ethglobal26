@@ -107,7 +107,7 @@ export default function VerifyPage() {
             </label>
           </div>
 
-          <details className="rounded-md border border-line px-3 py-2" open={!!value || !!salt}>
+          <details className="rounded-[10px] border border-line px-3.5 py-3" open={!!value || !!salt}>
             <summary className="cursor-pointer font-medium">Optional: the value and salt you were shown (selective disclosure)</summary>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <label className="flex flex-col gap-1">

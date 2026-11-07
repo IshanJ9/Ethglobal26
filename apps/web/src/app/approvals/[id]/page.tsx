@@ -63,8 +63,8 @@ export default function ApprovalPage() {
   const pending = a.status === "pending";
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <PageTitle title="Approve scorecard" sub={emp ? `${emp.display_name} · version ${s?.version}` : undefined} right={<StatusChip status={a.status} />} />
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
+      <PageTitle crumbs={s ? [{ label: "Scorecard", href: `/scorecards/${s.scorecard_id}` }, { label: "Approval" }] : undefined} title={emp ? `Approve ${emp.display_name}'s scorecard` : "Approve scorecard"} sub={emp ? `${emp.display_name} · version ${s?.version}` : undefined} right={<StatusChip status={a.status} />} />
 
       <Card title="You are approving" right={s ? <TextLink href={`/scorecards/${s.scorecard_id}`}>Open scorecard</TextLink> : null}>
         {s ? (
@@ -108,7 +108,7 @@ export default function ApprovalPage() {
           <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium">Comment (optional; required context for a denial)</span>
-              <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} maxLength={500} className="rounded-md border border-line px-3 py-2" />
+              <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} maxLength={500} className="rounded-[10px] border border-line px-3.5 py-3" />
             </label>
             <div className="flex gap-3">
               <Button onClick={() => complete.mutate("approve")} disabled={!world || complete.isPending}>Approve</Button>

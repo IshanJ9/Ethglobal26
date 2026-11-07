@@ -101,7 +101,7 @@ export default function TeamPage() {
         ) : team.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-muted">
+              <thead className="text-left font-mono text-xs uppercase tracking-[0.04em] text-muted">
                 <tr className="border-b border-line">
                   <th className="py-2 pr-3 font-medium">Person</th>
                   <th className="py-2 pr-3 text-right font-medium">Score</th>

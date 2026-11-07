@@ -93,6 +93,7 @@ export default function ScorecardPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageTitle
+        crumbs={[{ label: "Team", href: "/team" }, { label: "Scorecard" }]}
         title={<>{emp?.display_name ?? s.employee_id} <span className="text-muted">· v{s.version}</span></>}
         sub={`${cycle?.label ?? s.cycle_id} · ${plan.data?.name ?? s.result.plan_id}`}
         right={<div className="flex items-center gap-2"><StatusChip status={s.status} /><Button kind="secondary" onClick={refresh}>Refresh</Button></div>}
