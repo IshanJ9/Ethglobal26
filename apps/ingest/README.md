@@ -39,3 +39,5 @@ pnpm --filter @proofwork/ingest test
 GitHub webhook: payload URL `https://<tunnel>/webhooks/github` (smee.io or cloudflared to `localhost:8788`),
 content type JSON, secret = `GITHUB_WEBHOOK_SECRET`, events: Pull requests, Pull request reviews, Issues.
 Map logins with `GITHUB_LOGIN_MAP=login=emp_dev_a,...`.
+
+**Voice.** In the web app, the *Dictate* button on New claim records in the browser; Telegram voice notes work the same way. Both are transcribed on 0G Private Computer (`whisper-large-v3`, private trust mode) and the audio is never stored.
