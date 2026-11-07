@@ -54,3 +54,5 @@ Current: https://nuke-elite-pregnant-xbox.trycloudflare.com
   - the review agent's self-signed prompt record
 - World: four IDKit actions, plus Agent Pass `apc_607d…` (Orb class, used once, a reuse refused)
 - 0G: claim drafts, review reasoning, tool-calling runs (request ids on every record), 229 evidence items on 0G Storage
+
+- GitHub ingestion: merged PRs, approved reviews and closed bugs arrive via the repo webhook (HMAC-checked) and become verified evidence.
