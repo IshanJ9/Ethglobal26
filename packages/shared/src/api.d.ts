@@ -959,6 +959,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/voice/transcriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Employees (any internal persona). Dictation: speech-to-text on 0G Private Computer (whisper-large-v3, private trust mode). The audio goes to 0G only and is not stored; the transcript is returned for the caller to file as a normal claim (redacted, sealed and committed like typed text). Only the 0G request id is audited. */
+        post: operations["transcribeVoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/agents/promotion-chat": {
         parameters: {
             query?: never;
@@ -2002,6 +2019,17 @@ export interface components {
                 explorer_url: string | null;
             }[];
             settled_at: components["schemas"]["Timestamp"];
+        };
+        VoiceTranscript: {
+            text: string;
+            /** @enum {string} */
+            provider: "0g_private_computer";
+            model: string;
+            request_id: string;
+            zg_res_key: string | null;
+            audio_seconds: number | null;
+            latency_ms: number;
+            created_at: components["schemas"]["Timestamp"];
         };
     };
     responses: {
@@ -3574,6 +3602,37 @@ export interface operations {
             };
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    transcribeVoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    audio_base64: string;
+                    mime_type: string;
+                    language?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceTranscript"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
             409: components["responses"]["Error"];
         };
     };

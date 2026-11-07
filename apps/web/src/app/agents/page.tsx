@@ -1,5 +1,6 @@
 "use client";
 
+import { VoiceButton } from "@/components/VoiceButton";
 import { useState } from "react";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { useRequireSession } from "@/lib/auth";
@@ -163,6 +164,7 @@ function PromotionChatCard({ cycleId }: { cycleId: string }) {
       <ErrorNote error={err} className="my-2" />
       <div className="mt-3 flex gap-2">
         <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !busy && send()} className="flex-1 rounded border border-line bg-surface px-3 py-2 text-sm" placeholder="e.g. We need one new team lead in Sales" />
+        <VoiceButton onText={(t) => setInput(t)} />
         <Button onClick={send} disabled={busy}>Send</Button>
       </div>
     </Card>

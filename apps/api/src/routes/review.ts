@@ -58,6 +58,7 @@ export async function reviewRoutes(app: FastifyInstance, { svc }: { svc: Service
   // ---- HR agents on 0G (bonus allocation, promotion planning) ----
   app.post("/v1/agents/bonus-allocation", auth, async (req) => svc.agents.allocate(me(req), req.body as { cycle_id: string; cluster_id: string; budget: string; kind: "year_end_bonus" | "bounty" | "freelance" }));
   app.post("/v1/agents/bonus-allocation/:allocation_id/settle", auth, async (req) => svc.pool.settle(me(req), (req.params as { allocation_id: string }).allocation_id));
+  app.post("/v1/voice/transcriptions", { ...auth, bodyLimit: 3 * 1024 * 1024 }, async (req) => svc.voice.transcribe(me(req), req.body as { audio_base64: string; mime_type: string; language?: string | null }));
   app.post("/v1/agents/promotion-chat", auth, async (req) => svc.agents.promote(me(req), req.body as { cycle_id: string; messages: Array<{ role: "user" | "assistant"; content: string }> }));
 
   // ---- zero-knowledge score proofs ----

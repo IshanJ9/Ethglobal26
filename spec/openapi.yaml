@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Proofwork API
-  version: 1.6.0
+  version: 1.7.0
   description: |
     FROZEN CONTRACT between Agent A (implements) and Agent B (consumes). Changes only via CHANGE_REQUESTS.md.
     Conventions (apply everywhere):
@@ -31,6 +31,7 @@ tags:
   - { name: zk }
   - { name: agent-pass }
   - { name: agents }
+  - { name: voice }
   - { name: dev }
 security:
   - bearerAuth: []
@@ -836,6 +837,28 @@ paths:
         "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/BonusAllocation" } } } }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/voice/transcriptions:
+    post:
+      tags: [voice]
+      operationId: transcribeVoice
+      description: "Employees (any internal persona). Dictation: speech-to-text on 0G Private Computer (whisper-large-v3, private trust mode). The audio goes to 0G only and is not stored; the transcript is returned for the caller to file as a normal claim (redacted, sealed and committed like typed text). Only the 0G request id is audited."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [audio_base64, mime_type]
+              properties:
+                audio_base64: { type: string, minLength: 1, maxLength: 2900000 }
+                mime_type: { type: string, maxLength: 80 }
+                language: { type: [string, "null"], maxLength: 8 }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/VoiceTranscript" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
   /v1/agents/promotion-chat:
     post:
@@ -2101,3 +2124,16 @@ components:
               tx_hash: { type: string }
               explorer_url: { type: [string, "null"] }
         settled_at: { $ref: "#/components/schemas/Timestamp" }
+    VoiceTranscript:
+      type: object
+      additionalProperties: false
+      required: [text, provider, model, request_id, zg_res_key, audio_seconds, latency_ms, created_at]
+      properties:
+        text: { type: string }
+        provider: { type: string, enum: [0g_private_computer] }
+        model: { type: string }
+        request_id: { type: string }
+        zg_res_key: { type: [string, "null"] }
+        audio_seconds: { type: [number, "null"] }
+        latency_ms: { type: integer }
+        created_at: { $ref: "#/components/schemas/Timestamp" }

@@ -28,6 +28,7 @@ import { defaultReplicaDir, makeReplicaStore, ReplicaService, type ReplicaStore 
 import { API_DIR } from "./config.ts";
 import { EnsDirectory } from "./ens/directory.ts";
 import { EnsCredentials } from "./ens/credentials.ts";
+import { VoiceService } from "./voice/voice.ts";
 import { SYSTEM_PROMPT } from "./review/reasoning.ts";
 import { keccak256, stringToBytes } from "viem";
 import { EnsResolver, type EnsLookup } from "./ens/resolver.ts";
@@ -120,9 +121,11 @@ export function buildServices(config: Config, o: ServiceOverrides = {}, log: (m:
   const pool = new PoolService(db, org, audit, config, clock, (fn) => chainSvc.exclusive(fn));
   const agents = new AgentService(db, org, clusters, contextSvc, audit, clock, config.ZEROG_MODE === "live" && config.ZEROG_API_KEY && config.ZEROG_MODEL ? { baseUrl: config.ZEROG_BASE_URL, apiKey: config.ZEROG_API_KEY, model: config.ZEROG_MODEL } : null, pool);
 
+  const voice = new VoiceService(config.ZEROG_MODE === "live" && config.ZEROG_API_KEY ? { baseUrl: config.ZEROG_BASE_URL, apiKey: config.ZEROG_API_KEY } : null, audit, clock);
+
   return {
     config, clock, db, org, audit, evidence, claimsRepo, scorecards, envelope, ledger, compute, inference, world, claims, jwt,
-    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk, agentPass, agents, pool,
+    chain, chains, scorecardSvc, chainSvc, runs, verify, replica, ens, clusters, contextSvc, reviews, zk, agentPass, agents, pool, voice,
   };
 }
 export type Services = ReturnType<typeof buildServices>;

@@ -6,10 +6,10 @@ no spec change and the web app sees everything it files.
 
 | Channel | Becomes | Counts toward the score |
 |---|---|---|
-| Telegram text (type it, or dictate it with **Wispr Flow**) | claim, AI-drafted, `drafted` | only after the co-signer signs (`verified`) |
+| Telegram text (typed, or a voice note) | claim, AI-drafted, `drafted` | only after the co-signer signs (`verified`) |
 | Telegram forward (`forward_origin`) | claim, prefixed "Forwarded message from a contact, originally sent <date>" | same |
 | WhatsApp export `.txt` / `.zip` (iOS + both Android formats, multi-line) | one claim per day-chunk (max 40 msgs, 5 most recent chunks), names replaced with Person 1, 2… | same |
-| Voice note / audio | not transcribed (no speech-to-text provider); the bot asks for text or Wispr Flow dictation | n/a |
+| Voice note / audio | transcribed on **0G Private Computer** (`whisper-large-v3`, private mode) via `POST /v1/voice/transcriptions`, then filed like text (the audio is not stored) | same as text |
 | GitHub merged PR / approved review / closed `bug` issue / revert PR | `pr_merged` deliverables:1 / `review_done` code_reviews:1 / `bug_fixed` (P0-P3 label) / `pr_reverted` | immediately (system of record, verified at ingest) |
 
 **Privacy.** Every informal message is redacted in the bot before it leaves (phones, emails, UPI IDs, card,

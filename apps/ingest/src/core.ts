@@ -75,6 +75,16 @@ export class IngestCore {
     return p;
   }
 
+  /** Voice note -> text on 0G Private Computer (whisper-large-v3) via the API; the audio is not stored. */
+  async transcribe(telegramUserId: number, bytes: Uint8Array, mimeType: string): Promise<{ text: string; requestId: string }> {
+    const ctx = await this.filer.context(this.personaFor(telegramUserId));
+    const t = await this.o.api.call<{ text: string; request_id: string }>("POST", "/v1/voice/transcriptions", {
+      token: ctx.token,
+      body: { audio_base64: Buffer.from(bytes).toString("base64"), mime_type: mimeType },
+    });
+    return { text: t.text, requestId: t.request_id };
+  }
+
   async kras(telegramUserId: number): Promise<Kra[]> {
     return (await this.filer.context(this.personaFor(telegramUserId))).kras;
   }

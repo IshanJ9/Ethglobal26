@@ -8,6 +8,7 @@ import { useRequireSession, useSignOutOnUnauthorized } from "@/lib/auth";
 import { PERSONAS } from "@/lib/personas";
 import { useCurrentCycle, useEmployees, usePlan } from "@/lib/queries";
 import { ActorTag, Button, Card, ErrorNote, Loading, PageTitle } from "@/components/ui";
+import { VoiceButton } from "@/components/VoiceButton";
 
 const COSIGNERS = PERSONAS.filter((p) => p.role === "external_cosigner");
 
@@ -74,9 +75,13 @@ export default function NewClaimPage() {
             {plan.data && kras.length === 0 ? <span className="text-xs text-muted">Your plan has no KRAs that take co-signed claims.</span> : null}
           </label>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">What happened</span>
+          <div className="flex flex-col gap-1 text-sm">
+            <span className="flex items-center justify-between gap-2">
+              <label htmlFor="claim-text" className="font-medium">What happened</label>
+              <VoiceButton onText={(t) => setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${t}` : t).slice(0, 4000))} />
+            </span>
             <textarea
+              id="claim-text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={6}
@@ -85,7 +90,7 @@ export default function NewClaimPage() {
               className="rounded-md border border-line bg-surface px-3 py-2"
             />
             <span className="text-xs text-muted">Your text is treated as data. Instructions inside it are ignored and flagged.</span>
-          </label>
+          </div>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">Who will co-sign</span>

@@ -95,8 +95,7 @@ Telegram text / forwards / WhatsApp exports become **claims** (AI draft, employe
 they count only once the co-signer signs), and GitHub merged PRs / approved reviews / closed `bug` issues / revert
 PRs go through `POST /v1/evidence/ingest` as **verified** system-of-record evidence (HMAC-checked webhook, plus a
 backfill script). Informal text is redacted in the bot before it reaches the API, and WhatsApp names are
-pseudonymised. Voice notes are not transcribed (no speech-to-text provider; Wispr Flow dictation into Telegram is
-the input path). Only KRAs with source `cosign`/`worklog`/`manual` accept claims: in the seed org, engineering's
+pseudonymised. Voice notes and in-app dictation are transcribed on 0G Private Computer (`whisper-large-v3`, private mode) via `POST /v1/voice/transcriptions`; the audio is not stored. Only KRAs with source `cosign`/`worklog`/`manual` accept claims: in the seed org, engineering's
 `client_engagement`; sales and marketing plans are scored from CRM/HRIS only. Details: `apps/ingest/README.md`.
 
 ## 5. Known limits (honest list)

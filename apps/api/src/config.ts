@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-export const SPEC_VERSION = "1.6.0";
+export const SPEC_VERSION = "1.7.0";
 
 /** apps/api directory and monorepo root, independent of the process cwd. */
 export const API_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");

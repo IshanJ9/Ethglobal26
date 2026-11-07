@@ -1,6 +1,7 @@
 // Telegram bot (grammY). DMs only. Every message is redacted in the bot before it reaches the API.
 //   /start <code>  link this Telegram account to a Proofwork persona
-//   text           your own claim (tip: dictate it with Wispr Flow)        -> telegram_text
+//   text           your own claim (type it or dictate it)                  -> telegram_text
+//   voice / audio  transcribed on 0G Private Computer (whisper-large-v3)   -> telegram_text
 //   forward        a client's message forwarded to the bot                  -> telegram_forward
 //   .txt / .zip    a WhatsApp chat export                                   -> whatsapp_export
 //   voice / audio  not transcribed (no speech-to-text provider): the bot asks for text instead
@@ -38,7 +39,7 @@ export function buildBot(token: string, core: IngestCore, log: (m: string) => vo
     }
     try {
       const { displayName } = await core.link(ctx.from!.id, code);
-      await ctx.reply(`Linked as ${displayName}. Send me what you did (type it, or dictate it with Wispr Flow), forward a client's message, or send a WhatsApp chat export (.txt or .zip).`);
+      await ctx.reply(`Linked as ${displayName}. Send me what you did (type it, or send a voice note), forward a client's message, or send a WhatsApp chat export (.txt or .zip).`);
     } catch (e) {
       await fail(ctx, e);
     }
@@ -73,9 +74,23 @@ export function buildBot(token: string, core: IngestCore, log: (m: string) => vo
     return offer(ctx, "telegram_text", ctx.message.text);
   });
 
-  bot.on(["message:voice", "message:audio"], (ctx) =>
-    ctx.reply("I can't transcribe audio yet. Please type it, or dictate it with Wispr Flow into this chat, and I'll file it."),
-  );
+  bot.on(["message:voice", "message:audio"], async (ctx) => {
+    const media = ctx.message.voice ?? ctx.message.audio;
+    if (!media) return;
+    if ((media.file_size ?? 0) > 2 * 1024 * 1024) return ctx.reply("That recording is over 2 MB. Please keep voice notes under about 2 minutes.");
+    try {
+      const file = await ctx.getFile();
+      const res = await fetch(`https://api.telegram.org/file/bot${token}/${file.file_path}`);
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const mime = media.mime_type ?? "audio/ogg";
+      const { text, requestId } = await core.transcribe(ctx.from!.id, bytes, mime);
+      if (!text.trim()) return ctx.reply("I couldn't hear any speech in that. Try again, or type it.");
+      await ctx.reply(`Transcribed privately on 0G (request ${requestId.split(",")[0].slice(0, 12)}…).`);
+      return offer(ctx, "telegram_text", text);
+    } catch (e) {
+      await fail(ctx, e);
+    }
+  });
 
   bot.on("message:document", async (ctx) => {
     const doc = ctx.message.document;
