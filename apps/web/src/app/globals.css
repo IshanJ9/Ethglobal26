@@ -2,43 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --paper: 237 240 243;   /* #EDF0F3 cool ledger grey */
-  --surface: 255 255 255;
-  --ink: 23 32 51;        /* #172033 navy ink */
-  --muted: 84 95 115;     /* #545F73 */
-  --line: 205 211 220;    /* #CDD3DC */
-  --danger: 179 38 30;    /* #B3261E */
-  --ai: 109 75 216;       /* #6D4BD8  agents collect */
-  --code: 47 95 143;      /* #2F5F8F  code computes */
-  --human: 150 102 0;     /* #966600  humans decide (ochre, darkened for AA text) */
-  --chain: 14 122 107;    /* #0E7A6B  chain proves */
-  --mock: 233 185 73;     /* #E9B949  mock hatch */
+/*
+ * Proofwork design tokens (Claude Design file "Proofwork.dc.html").
+ * Every colour is an RGB triplet so Tailwind's /<alpha> modifiers keep working.
+ * Token names are unchanged from the first pass, so every page restyles from here.
+ */
+:root,
+:root[data-theme="light"] {
+  --paper: 246 245 240;   /* #f6f5f0 page */
+  --surface: 237 236 229; /* #edece5 cards */
+  --ink: 20 24 21;        /* #141815 */
+  --ink-2: 52 58 53;      /* #343a35 secondary text */
+  --muted: 80 87 79;      /* #50574f */
+  --faint: 99 106 97;     /* #636a61 */
+  --line: 214 214 209;    /* ink at 14% over paper */
+  --accent: 74 122 14;    /* #4a7a0e olive */
+  --accent-hover: 59 101 8;
+  --on-accent: 246 245 240;
+  --danger: 156 59 47;    /* #9c3b2f */
+  --ok: 59 111 29;        /* #3b6f1d */
+  --warn: 143 79 18;      /* #8f4f12 */
+  /* The four actors of "agents collect, code computes, humans decide, chain proves". */
+  --ai: 106 79 192;       /* #6a4fc0 */
+  --code: 42 95 149;      /* #2a5f95 */
+  --human: 59 111 29;     /* #3b6f1d */
+  --chain: 122 92 20;     /* #7a5c14 */
+  --mock: 80 87 79;
+  --bar: 246 245 240;
+  --shadow: 30 40 30;
   color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper: 14 18 16;      /* #0e1210 */
+  --surface: 20 26 22;    /* #141a16 */
+  --ink: 236 235 227;     /* #ecebe3 */
+  --ink-2: 201 203 195;   /* #c9cbc3 */
+  --muted: 162 166 157;   /* #a2a69d */
+  --faint: 134 139 130;   /* #868b82 */
+  --line: 45 48 46;       /* ink at 14% over paper */
+  --accent: 198 239 106;  /* #c6ef6a lime */
+  --accent-hover: 214 247 140;
+  --on-accent: 14 18 16;
+  --danger: 240 138 122;  /* #f08a7a */
+  --ok: 159 214 138;      /* #9fd68a */
+  --warn: 240 180 100;    /* #f0b464 */
+  --ai: 185 168 245;      /* #b9a8f5 */
+  --code: 127 183 232;    /* #7fb7e8 */
+  --human: 159 214 138;   /* #9fd68a */
+  --chain: 226 194 122;   /* #e2c27a */
+  --mock: 162 166 157;
+  --bar: 14 18 16;
+  --shadow: 0 0 0;
+  color-scheme: dark;
 }
 
 html {
   background: rgb(var(--paper));
   color: rgb(var(--ink));
+  overflow-x: clip; /* full-width bands use 100vw, which includes the scrollbar */
 }
 
 body {
   background: rgb(var(--paper));
-  font-feature-settings: "ss01", "tnum";
+  font-feature-settings: "tnum";
+  overflow-x: clip;
+}
+
+/* The display face is a light serif: headings stay light even where a page asks for semibold/bold. */
+.font-display.font-semibold,
+.font-display.font-bold {
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Form fields follow the theme (a page's own bg-* class still wins). */
+@layer base {
+  input,
+  select,
+  textarea {
+    background-color: rgb(var(--paper));
+    color: rgb(var(--ink));
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: rgb(var(--faint));
+  }
+}
+
+a:hover {
+  text-decoration-color: currentColor;
 }
 
 :focus-visible {
-  outline: 2px solid rgb(var(--code));
+  outline: 2px solid rgb(var(--accent));
   outline-offset: 2px;
 }
 
-/* MOCK is hatched so it can never be mistaken for a verified (solid) state. */
+/* MOCK is hatched and dashed so it can never be mistaken for a verified (solid) state. */
 .hatch-mock {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgb(var(--mock)) 0 5px,
-    rgb(var(--mock) / 0.55) 5px 10px
-  );
+  border: 1px dashed rgb(var(--mock));
+  color: rgb(var(--mock));
+  background-image: repeating-linear-gradient(135deg, transparent 0 5px, rgb(var(--line)) 5px 6px);
+}
+
+/* Full-width band inside the centred main column (landing page sections). */
+.bleed {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isManager, useRequireSession, useSignOutOnUnauthorized } from "@/lib/auth";
+import { getSession, useSession } from "@/lib/session";
+import { Landing } from "@/components/Landing";
 import { formatBps } from "@/lib/format";
 import { useClaims, useCurrentCycle, useEvidence, useScorecards } from "@/lib/queries";
 import { ActorTag, Card, Empty, ErrorNote, Loading, Money, PageTitle, Stat, StatusChip, TextLink } from "@/components/ui";
@@ -12,7 +14,20 @@ const SOURCE_LABEL: Record<string, string> = {
   github: "Git", tickets: "Tickets", crm: "CRM", hris: "HRIS", worklog: "Work log", cosign: "Co-signed", manual: "Manual", dev: "Demo inject",
 };
 
+/**
+ * `/`: signed-out visitors see the public landing page; anyone signed in gets "My cycle" exactly as before
+ * (HR still lands on /clusters). The dashboard only mounts with a session, so its queries never run signed out.
+ */
 export default function HomePage() {
+  const session = useSession();
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  if (!hydrated) return null;
+  if (!session && !getSession()) return <Landing />;
+  return <MyCycle />;
+}
+
+function MyCycle() {
   const me = useRequireSession();
   const { cycle, ...cycles } = useCurrentCycle();
   const claims = useClaims(cycle?.cycle_id);
@@ -51,7 +66,7 @@ export default function HomePage() {
         sub={cycle ? `${cycle.label} · ${cycle.starts_on} to ${cycle.ends_on}` : cycles.isLoading ? "Loading cycle…" : "No cycle"}
         right={
           isManager(me) ? (
-            <Link href="/team" className="rounded-md bg-ink px-3.5 py-2 text-sm font-medium text-surface">My team</Link>
+            <Link href="/team" className="rounded-full bg-accent px-5 py-2.5 text-[15px] font-semibold text-on-accent hover:bg-accent-hover hover:text-on-accent">My team</Link>
           ) : null
         }
       />
@@ -78,7 +93,7 @@ export default function HomePage() {
       <div className="grid gap-6 md:grid-cols-[3fr_2fr]">
         <Card
           title="My claims"
-          right={<Link href="/claims/new" className="rounded-md bg-ink px-3 py-1.5 text-sm font-medium text-surface">New claim</Link>}
+          right={<Link href="/claims/new" className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-on-accent hover:bg-accent-hover hover:text-on-accent">New claim</Link>}
         >
           {claims.isLoading ? (
             <Loading />
@@ -86,7 +101,7 @@ export default function HomePage() {
             <ul className="divide-y divide-line">
               {myClaims.map((c) => (
                 <li key={c.claim_id}>
-                  <Link href={`/claims/${c.claim_id}`} className="flex items-center justify-between gap-3 py-2.5 hover:bg-paper">
+                  <Link href={`/claims/${c.claim_id}`} className="flex items-center justify-between gap-3 py-3 hover:text-accent">
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{c.body.summary || "Untitled claim"}</span>
                       <span className="block text-xs text-muted">{c.kra_id.replace(/_/g, " ")} · co-signer {c.cosigner_label}</span>

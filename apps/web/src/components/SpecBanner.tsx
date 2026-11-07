@@ -11,7 +11,7 @@ export function SpecBanner() {
     return (
       <div role="alertdialog" aria-modal="true" aria-labelledby="spec-title"
         className="fixed inset-0 z-50 grid place-items-center bg-ink/70 p-4">
-        <div className="max-w-md rounded-md bg-surface p-6 shadow-lg">
+        <div className="max-w-md rounded-[14px] border border-line bg-surface p-6 shadow-lg">
           <h2 id="spec-title" className="font-display text-xl font-semibold">
             This app and the API disagree on the spec
           </h2>
@@ -27,7 +27,8 @@ export function SpecBanner() {
 
   if (hs.state === "unknown") {
     return (
-      <div role="status" className="hatch-mock px-4 py-1.5 text-sm font-medium text-ink">
+      <div role="status" className="hatch-mock border-x-0 border-t-0 px-4 py-1.5 text-sm font-medium">
+
         The API did not report a spec version (it answered “{hs.serverVersion}”). This is expected
         with the schema-only mock API; data on screen is placeholder.
       </div>

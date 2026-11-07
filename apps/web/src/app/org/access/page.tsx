@@ -150,7 +150,7 @@ export default function AccessPage() {
                   <td>{short(c.target)}</td>
                   <td><code>{c.op.kind === "addr" ? "addr (ETH)" : c.op.key}</code></td>
                   <td>{c.expect ? "allow" : "deny"}</td>
-                  <td>{r === null ? <span className="text-muted">…</span> : <span className={r === c.expect ? (r ? "font-semibold text-emerald-700" : "font-semibold text-red-700") : "font-bold text-amber-600"}>{r ? "allowed" : "reverted"}{r !== c.expect ? " (unexpected)" : ""}</span>}</td>
+                  <td>{r === null ? <span className="text-muted">…</span> : <span className={r === c.expect ? (r ? "font-semibold text-ok" : "font-semibold text-danger") : "font-bold text-warn"}>{r ? "allowed" : "reverted"}{r !== c.expect ? " (unexpected)" : ""}</span>}</td>
                   <td className="hidden text-xs text-muted sm:table-cell">{c.why}</td>
                 </tr>
               );
@@ -188,7 +188,7 @@ export default function AccessPage() {
         <p className="mt-2 text-xs text-muted">{ACTORS.find((a) => a.id === actor)?.role}</p>
         <ErrorNote error={err} className="mt-3" />
         {out ? (
-          <div className={`mt-3 rounded border px-3 py-2 text-sm ${out.ok ? "border-emerald-600/40 bg-emerald-600/10" : "border-red-600/40 bg-red-600/10 text-red-700"}`}>
+          <div className={`mt-3 rounded border px-3 py-2 text-sm ${out.ok ? "border-ok/50 bg-ok/10 text-ok" : "border-danger/50 bg-danger/10 text-danger"}`}>
             {out.ok ? "✓ " : "✗ "}{out.msg}
             {out.tx ? <span className="ml-2 inline-flex items-center gap-1">tx <HashPill value={out.tx} href={`${EXPLORER}/tx/${out.tx}`} /></span> : null}
             {out.read !== undefined ? <span className="ml-2">· on-chain value now: <b>{out.read}</b></span> : null}

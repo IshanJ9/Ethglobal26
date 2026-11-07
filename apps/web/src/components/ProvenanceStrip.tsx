@@ -32,11 +32,11 @@ export function ProvenanceStrip() {
     <div>
     <ol
       aria-label="How Proofwork reaches a decision"
-      className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line md:grid-cols-4"
+      className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-line bg-line md:grid-cols-4"
     >
       {steps.map((s) => (
-        <li key={s.actor} className={`border-t-[3px] bg-surface px-3 py-2 ${ACCENT[s.actor]}`}>
-          <div className="font-display text-[15px] font-semibold leading-tight">{s.verb}</div>
+        <li key={s.actor} className={`border-t-2 bg-paper px-3 py-2 ${ACCENT[s.actor]}`}>
+          <div className="font-display text-[17px] leading-tight">{s.verb}</div>
           <div className="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted">
             <span className="truncate">{s.who}</span>
             {s.mode ? (
