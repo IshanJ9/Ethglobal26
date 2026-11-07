@@ -1,4 +1,4 @@
-// pnpm --filter @proofwork/api exec tsx scripts/replicate-0g.ts [--cluster software.ic | --all] [--cycle cyc_2026h2] [--limit N]
+// pnpm --filter @proofwork/api exec tsx scripts/replicate-0g.ts [--cluster software.ic | --all] [--cycle cyc_2026h2] [--limit N] [--employee emp_x] [--force]
 // CR-004: moves the ENCRYPTED evidence payloads of existing items from the local replica to 0G Storage
 // (items ingested while 0G storage was not configured). The payload is the same sealed ciphertext the
 // ledger stores (record-key encrypted); 0G never sees plaintext. After upload the evidence row points at
@@ -22,6 +22,8 @@ const all = process.argv.includes("--all");
 const cluster = arg("cluster") ?? (all ? undefined : "software.ic");
 const cycle = arg("cycle") ?? "cyc_2026h2";
 const limit = Number(arg("limit") ?? 10_000);
+const onlyEmployee = arg("employee"); // e.g. --employee emp_dev_a
+const force = process.argv.includes("--force"); // re-upload even if a root is recorded (0G copy missing)
 
 const db = openDb(c.dbPath);
 loadOrgFixtures(db);
@@ -31,12 +33,12 @@ const store = new ZeroGReplicaStore(c.ZEROG_STORAGE_RPC, c.ZEROG_STORAGE_INDEXER
 const localDir = join(API_DIR, "data", "replica");
 
 const people = org.employees().filter((e) => (cluster ? clusterIdOf(e) === cluster : true));
-const rows = people.flatMap((e) => ev.forEmployeeCycle(e.employee_id, cycle));
+const rows = people.filter((e) => !onlyEmployee || e.employee_id === onlyEmployee).flatMap((e) => ev.forEmployeeCycle(e.employee_id, cycle));
 // only items whose replica is still the local file (or missing); 0G-rooted items are skipped
 const todo = rows.filter((r) => {
   const s = ev.secrets(r.evidence_id);
   if (!s?.payload_enc) return false; // shredded
-  if (!r.replica_root) return true;
+  if (!r.replica_root || force) return true;
   return existsSync(join(localDir, `${r.replica_root}.bin`));
 }).slice(0, limit);
 console.log(`${people.length} people (${cluster ?? "all clusters"}), ${rows.length} evidence items, ${todo.length} to move to 0G Storage`);
