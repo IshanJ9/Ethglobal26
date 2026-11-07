@@ -7,7 +7,7 @@ import { Button, Card, ErrorNote, HashPill, Loading, PageTitle } from "@/compone
 
 const Mark = ({ ok, label, sub }: { ok: boolean | null; label: string; sub?: string }) => (
   <li className="flex items-start gap-3">
-    <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${ok === null ? "bg-muted" : ok ? "bg-emerald-600" : "bg-red-600"}`}>{ok === null ? "?" : ok ? "✓" : "✗"}</span>
+    <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-paper ${ok === null ? "bg-muted" : ok ? "bg-ok" : "bg-danger"}`}>{ok === null ? "?" : ok ? "✓" : "✗"}</span>
     <span><span className="font-medium">{label}</span>{sub ? <span className="block text-xs text-muted">{sub}</span> : null}</span>
   </li>
 );
@@ -46,7 +46,7 @@ export default function VerifyProofPage() {
       ) : null}
       {bundle && !res && !err ? <Loading what="Verifying locally and on Arc" /> : null}
       {res ? (
-        <Card title={all ? "Valid proof" : "Proof NOT valid"} right={<span className={`rounded px-2 py-0.5 text-xs font-semibold ${all ? "bg-emerald-600/15 text-emerald-700" : "bg-red-600/15 text-red-700"}`}>{all ? "VERIFIED" : "REJECTED"}</span>}>
+        <Card title={all ? "Valid proof" : "Proof NOT valid"} right={<span className={`rounded px-2 py-0.5 text-xs font-semibold ${all ? "bg-ok/15 text-ok" : "bg-danger/15 text-danger"}`}>{all ? "VERIFIED" : "REJECTED"}</span>}>
           <ul className="space-y-3 text-sm">
             <Mark ok={res.local} label="Groth16 proof verifies in this browser" sub="snarkjs with the published verification key" />
             <Mark ok={res.onchain} label="Arc's ScoreThresholdVerifier contract accepts it" sub={`verifyProof() eth_call on ${bundle?.verifier_address}`} />
@@ -68,7 +68,7 @@ export default function VerifyProofPage() {
           ) : null}
           {rec.tx ? <p className="mt-3 text-sm text-chain">Recorded on Arc · tx <HashPill value={rec.tx} href={rec.url} /></p> : null}
           <ErrorNote error={rec.error} className="mt-3" />
-          {res.error ? <p className="mt-3 text-xs text-red-700">Chain check error: {res.error}</p> : null}
+          {res.error ? <p className="mt-3 text-xs text-danger">Chain check error: {res.error}</p> : null}
         </Card>
       ) : null}
     </div>

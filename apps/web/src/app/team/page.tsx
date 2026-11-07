@@ -58,7 +58,7 @@ function Row({ emp, cards, cycleId }: { emp: Schemas["Employee"]; cards: Schemas
       <td className="py-2.5 text-right">
         <div className="flex justify-end gap-2">
           {latest ? (
-            <Link href={`/scorecards/${latest.scorecard_id}`} className="rounded-md border border-line px-3 py-1.5 text-sm hover:border-ink">Open</Link>
+            <Link href={`/scorecards/${latest.scorecard_id}`} className="rounded-full border border-line px-4 py-1.5 text-sm hover:border-accent">Open</Link>
           ) : (
             <>
               <Button kind="secondary" onClick={() => collect.mutate(emp.employee_id)} disabled={collect.isPending}>

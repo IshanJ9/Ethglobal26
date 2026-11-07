@@ -45,7 +45,7 @@ export default function ReviewsPage() {
                   <td className="py-2 pr-3 text-right tabular-nums">{formatBps(r.score_bps)}</td>
                   <td className="py-2 pr-3"><SourceBadge source={r.reasoning_source} /></td>
                   <td className="py-2 pr-3">{r.anchor_tx_hash ? <HashPill value={r.anchor_tx_hash} /> : <span className="text-xs text-muted">not yet</span>}</td>
-                  <td className="py-2 pr-3 text-right"><Link href={`/reviews/${r.review_id}`} className="rounded-md border border-line px-3 py-1.5 hover:border-ink">Open</Link></td>
+                  <td className="py-2 pr-3 text-right"><Link href={`/reviews/${r.review_id}`} className="rounded-full border border-line px-4 py-1.5 text-sm hover:border-accent">Open</Link></td>
                 </tr>
               ))}
             </tbody>

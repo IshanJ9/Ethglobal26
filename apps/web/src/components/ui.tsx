@@ -5,14 +5,14 @@ import { useState, type ReactNode } from "react";
 import { errorMessage } from "@/lib/errors";
 import { formatUsdc, shortHex } from "@/lib/format";
 
-// Small shared building blocks. Plain styling for now; the Apple-style pass restyles these in one place.
+// Shared building blocks, styled to the Proofwork design (Newsreader display, Plex body, pill actions).
 
 export function PageTitle({ title, sub, right }: { title: ReactNode; sub?: ReactNode; right?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">{title}</h1>
-        {sub ? <p className="mt-1 text-muted">{sub}</p> : null}
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-balance font-display text-[clamp(34px,4vw,48px)] font-light leading-[1.02] tracking-[-0.02em]">{title}</h1>
+        {sub ? <p className="mt-2 max-w-2xl text-ink-2">{sub}</p> : null}
       </div>
       {right}
     </div>
@@ -21,10 +21,10 @@ export function PageTitle({ title, sub, right }: { title: ReactNode; sub?: React
 
 export function Card({ title, right, children, className = "" }: { title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-lg border border-line bg-surface p-4 ${className}`}>
+    <section className={`rounded-[14px] border border-line bg-surface p-5 sm:p-6 ${className}`}>
       {title || right ? (
-        <div className="mb-3 flex items-center justify-between gap-3">
-          {title ? <h2 className="font-display text-lg font-semibold">{title}</h2> : <span />}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {title ? <h2 className="font-display text-2xl font-normal leading-tight">{title}</h2> : <span />}
           {right}
         </div>
       ) : null}
@@ -36,9 +36,9 @@ export function Card({ title, right, children, className = "" }: { title?: React
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
-      <div className="mt-0.5 font-display text-2xl font-semibold tabular-nums">{value}</div>
-      {sub ? <div className="text-xs text-muted">{sub}</div> : null}
+      <div className="text-sm text-muted">{label}</div>
+      <div className="mt-1 font-display text-[34px] font-light leading-none tabular-nums">{value}</div>
+      {sub ? <div className="mt-1.5 text-xs text-muted">{sub}</div> : null}
     </div>
   );
 }
@@ -50,12 +50,14 @@ export function Money({ amount, className = "" }: { amount: string | null | unde
 
 type Tone = "ok" | "warn" | "bad" | "info" | "neutral";
 const TONE: Record<Tone, string> = {
-  ok: "border-chain/40 bg-chain/10 text-chain",
-  warn: "border-human/40 bg-human/10 text-human",
-  bad: "border-danger/40 bg-danger/10 text-danger",
-  info: "border-code/40 bg-code/10 text-code",
-  neutral: "border-line bg-paper text-muted",
+  ok: "border-ok text-ok",
+  warn: "border-warn text-warn",
+  bad: "border-danger text-danger",
+  info: "border-code text-code",
+  neutral: "border-muted/60 text-muted",
 };
+// The design marks each state with a glyph as well as a colour, so it reads without colour too.
+const TONE_GLYPH: Record<Tone, string> = { ok: "✓", warn: "!", bad: "✕", info: "●", neutral: "○" };
 const STATUS_TONE: Record<string, Tone> = {
   verified: "ok", vested: "ok", approved: "ok", attested: "ok", active: "info", closed: "neutral", succeeded: "ok",
   submitted: "info", pending_cosign: "info", pending_approval: "info", pending: "info", registered: "info", provisional: "info", running: "info", queued: "info",
@@ -66,7 +68,8 @@ const STATUS_TONE: Record<string, Tone> = {
 export function StatusChip({ status, tone }: { status: string; tone?: Tone }) {
   const t = tone ?? STATUS_TONE[status] ?? "neutral";
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${TONE[t]}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[13px] font-medium ${TONE[t]}`}>
+      <span aria-hidden className="text-[11px]">{TONE_GLYPH[t]}</span>
       {status.replace(/_/g, " ")}
     </span>
   );
@@ -79,7 +82,7 @@ export function HashPill({ value, href, head = 6, tail = 4 }: { value: string | 
   return (
     <span className="inline-flex items-center gap-1 font-mono text-xs">
       {href ? (
-        <a href={href} target="_blank" rel="noreferrer" className="underline decoration-line underline-offset-2 hover:decoration-ink" title={value}>
+        <a href={href} target="_blank" rel="noreferrer" className="underline decoration-line underline-offset-[3px] hover:text-accent hover:decoration-accent" title={value}>
           {text}
         </a>
       ) : (
@@ -94,7 +97,7 @@ export function HashPill({ value, href, head = 6, tail = 4 }: { value: string | 
             setTimeout(() => setCopied(false), 1200);
           });
         }}
-        className="rounded px-1 text-muted hover:text-ink"
+        className="rounded px-1 text-faint hover:text-accent"
       >
         {copied ? "copied" : "copy"}
       </button>
@@ -106,12 +109,12 @@ export function Button({
   children, onClick, disabled, kind = "primary", type = "button", className = "",
 }: { children: ReactNode; onClick?: () => void; disabled?: boolean; kind?: "primary" | "secondary" | "danger"; type?: "button" | "submit"; className?: string }) {
   const k = {
-    primary: "bg-ink text-surface hover:bg-ink/90",
-    secondary: "border border-line bg-surface hover:border-ink",
-    danger: "border border-danger/50 bg-surface text-danger hover:bg-danger/10",
+    primary: "border border-accent bg-accent font-semibold text-on-accent hover:border-accent-hover hover:bg-accent-hover",
+    secondary: "border border-line bg-surface text-ink hover:border-accent",
+    danger: "border border-danger bg-transparent text-danger hover:bg-danger/10",
   }[kind];
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={`rounded-md px-3.5 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${k} ${className}`}>
+    <button type={type} onClick={onClick} disabled={disabled} className={`whitespace-nowrap rounded-full px-5 py-2.5 text-[15px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${k} ${className}`}>
       {children}
     </button>
   );
@@ -120,7 +123,7 @@ export function Button({
 export function ErrorNote({ error, className = "" }: { error: unknown; className?: string }) {
   if (!error) return null;
   return (
-    <p role="alert" className={`rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger ${className}`}>
+    <p role="alert" className={`rounded-[10px] border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger ${className}`}>
       {errorMessage(error)}
     </p>
   );
@@ -131,7 +134,7 @@ export function Loading({ what = "Loading" }: { what?: string }) {
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded border border-dashed border-line px-3 py-4 text-center text-sm text-muted">{children}</p>;
+  return <p className="rounded-[10px] border border-dashed border-muted/50 px-3 py-5 text-center text-sm text-muted">{children}</p>;
 }
 
 /** Who produced a value (UX rule: every input says where it came from). */
@@ -147,7 +150,7 @@ export function ActorTag({ actor, label }: { actor: "ai" | "code" | "human" | "c
 
 export function TextLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="text-code underline decoration-code/30 underline-offset-2 hover:decoration-code">
+    <Link href={href} className="text-accent underline decoration-accent/40 underline-offset-[3px] hover:decoration-accent">
       {children}
     </Link>
   );
