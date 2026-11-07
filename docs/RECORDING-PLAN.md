@@ -7,7 +7,7 @@ phone's screen recorder and cut in later.
 
 ## Keep open (Chrome, one window, tabs in this order)
 
-1. **App:** https://nuke-elite-pregnant-xbox.trycloudflare.com (the public link)
+1. **App:** https://sites-solar-inexpensive-decade.trycloudflare.com (the public link)
 2. **Arc explorer:** https://explorer.testnet.arc.io
 3. **Sepolia Etherscan:** https://sepolia.etherscan.io
 4. **0G Storage scan:** https://storagescan-galileo.0g.ai

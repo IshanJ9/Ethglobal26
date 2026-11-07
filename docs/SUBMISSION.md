@@ -3,7 +3,7 @@
 **One line:** Proofwork turns year-end bonus reviews from opinion into proof. Agents collect the evidence, code
 computes the score, humans decide with World ID, and the chain proves it.
 
-**Repo:** https://github.com/IshanJ9/Ethglobal26 · **Live demo:** https://nuke-elite-pregnant-xbox.trycloudflare.com (served from the team laptop via a Cloudflare tunnel; pick any persona to sign in) · **Video:** `<link>`
+**Repo:** https://github.com/IshanJ9/Ethglobal26 · **Live demo:** https://sites-solar-inexpensive-decade.trycloudflare.com (served from the team laptop via a Cloudflare tunnel; pick any persona to sign in) · **Video:** `<link>`
 **Team:** `<names, Telegram, X>`
 
 ## Short description (for the form)

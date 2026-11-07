@@ -24,7 +24,7 @@ CFO). Have World App and your passkey phone ready. The database is the live one 
 `apps/web/.env.local` has `NEXT_PUBLIC_API_BASE=/pw-api`: the web app proxies the API on the same origin, so one
 tunnel serves everything. Start it with `cloudflared tunnel --no-autoupdate --url http://localhost:3000` and keep the
 API, the web app and the tunnel running (the quick-tunnel URL changes if it restarts; update docs/SUBMISSION.md).
-Current: https://nuke-elite-pregnant-xbox.trycloudflare.com
+Current: https://sites-solar-inexpensive-decade.trycloudflare.com
 
 ## Recording tips
 
