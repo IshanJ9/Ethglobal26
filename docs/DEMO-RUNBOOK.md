@@ -19,6 +19,19 @@ CFO). Have World App and your passkey phone ready. The database is the live one 
 | 11 | anyone | `/org/directory`, `/org/access` | 48 ENS names resolved live; the permission matrix (13 live checks); a manager edit that succeeds and a peer edit that the resolver reverts | ENS |
 | 12 | anyone | Arc Studio | The BonusPool project: prompt, tests, deploy (20 s clip) | Arc |
 
+## Public link (judges)
+
+`apps/web/.env.local` has `NEXT_PUBLIC_API_BASE=/pw-api`: the web app proxies the API on the same origin, so one
+tunnel serves everything. Start it with `cloudflared tunnel --no-autoupdate --url http://localhost:3000` and keep the
+API, the web app and the tunnel running (the quick-tunnel URL changes if it restarts; update docs/SUBMISSION.md).
+Current: https://nuke-elite-pregnant-xbox.trycloudflare.com
+
+## Recording tips
+
+- Use **Ben** for the Agent Pass and review scene: all 27 of his evidence items are on 0G Storage, so the review
+  says it read them back from 0G. (The rest of the Software IC cluster is still uploading; 0G testnet is slow.)
+- Voice: *New claim* → **Dictate** (allow the microphone). Transcription takes about 15 s on 0G.
+
 ## If something is slow
 
 - **0G** reasoning takes about 20 s, and 0G Storage reads 3 to 25 s. Pages say when they fall back to the local copy.
