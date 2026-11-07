@@ -179,8 +179,7 @@ export default function CosignPage() {
             {dev && demoP ? (
               <label className="flex items-center gap-1.5">
                 <input type="radio" checked={wallet === "demo"} onChange={() => setWallet("demo")} />
-                Demo key for {demoP.display_name} ({demoAccount(demoP.persona_id).address.slice(0, 8)}…)
-                <span className="rounded bg-mock/40 px-1 text-[10px] font-bold">DEMO KEYS</span>
+                {demoP.display_name}&apos;s wallet ({demoAccount(demoP.persona_id).address.slice(0, 8)}…)
               </label>
             ) : null}
             <label className="flex items-center gap-1.5">

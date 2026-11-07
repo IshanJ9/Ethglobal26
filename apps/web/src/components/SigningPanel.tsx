@@ -97,7 +97,7 @@ export function SigningPanel({
         {dev ? (
           <label className="flex items-center gap-1.5">
             <input type="radio" checked={wallet === "demo"} onChange={() => setWallet("demo")} />
-            Demo key for {persona.display_name} <span className="rounded bg-mock/40 px-1 text-[10px] font-bold">DEMO KEYS</span>
+            {persona.display_name}&apos;s wallet
           </label>
         ) : null}
         <label className="flex items-center gap-1.5">
@@ -113,7 +113,7 @@ export function SigningPanel({
         {dev ? (
           <label className="flex items-center gap-1.5 text-xs text-muted">
             <input type="checkbox" checked={tamper} onChange={(e) => setTamper(e.target.checked)} />
-            Demo: simulate the server changing the text
+            Security check: pretend the server changed one word
           </label>
         ) : null}
       </div>

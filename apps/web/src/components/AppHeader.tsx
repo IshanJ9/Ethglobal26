@@ -42,7 +42,6 @@ export function AppHeader() {
                 {session.persona.role === "hr" ? <Link href="/audit" className="text-muted hover:text-ink">Audit</Link> : null}
                 <Link href="/privacy" className="text-muted hover:text-ink">Privacy</Link>
                 <Link href="/verify" className="text-muted hover:text-ink">Verify</Link>
-                <Link href="/demo" className="text-muted hover:text-ink">Demo</Link>
               </nav>
             ) : (
               <nav className="flex gap-4 text-sm">

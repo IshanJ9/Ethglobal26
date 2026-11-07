@@ -42,8 +42,8 @@ export default function LoginPage() {
       <div className="max-w-2xl">
         <h1 className="font-display text-3xl font-semibold tracking-tight">Choose who you are</h1>
         <p className="mt-2 text-muted">
-          Demo sign-in for {cfg?.org_name ?? "the seeded company"}. Each person has their own role,
-          reporting line and demo signing key, so what you see changes with who you pick.
+          Sign in as anyone at {cfg?.org_name ?? "the company"}. Each person has their own role, reporting line and
+          wallet, so what you see changes with who you pick.
         </p>
       </div>
 
